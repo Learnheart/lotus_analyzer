@@ -2,7 +2,7 @@
 
 ## SerializationFormat Enum
 
-Dinh nghia tai `types.py:206`:
+Định nghĩa tại `types.py:206`:
 
 ```python
 class SerializationFormat(Enum):
@@ -11,14 +11,14 @@ class SerializationFormat(Enum):
     DEFAULT = "default"
 ```
 
-Cau hinh qua `lotus.settings.serialization_format` (settings.py:20):
+Cấu hình qua `lotus.settings.serialization_format` (settings.py:20):
 ```python
 serialization_format: SerializationFormat = SerializationFormat.DEFAULT
 ```
 
 ## df2text Function (task_instructions.py:325)
 
-Day la function chinh de serialize DataFrame rows thanh text strings cho LLM input.
+Đây là function chính để serialize DataFrame rows thành text strings cho LLM input.
 
 ```python
 def df2text(df: pd.DataFrame, cols: list[str]) -> list[str]:
@@ -54,7 +54,7 @@ def df2text(df: pd.DataFrame, cols: list[str]) -> list[str]:
 
 ## 3 Format Examples
 
-Cho DataFrame row: `{"title": "AI Guide", "author": "John"}` va `cols=["title", "author"]`:
+Cho DataFrame row: `{"title": "AI Guide", "author": "John"}` và `cols=["title", "author"]`:
 
 ### DEFAULT (task_instructions.py:329, 343-344)
 
@@ -63,7 +63,7 @@ Cho DataFrame row: `{"title": "AI Guide", "author": "John"}` va `cols=["title", 
 [Author]: <<John>>
 ```
 
-Format: `[{col.capitalize()}]: <<{value}>>\n` (guillemet characters `<<` va `>>`)
+Format: `[{col.capitalize()}]: <<{value}>>\n` (guillemet characters `<<` và `>>`)
 
 ### JSON (task_instructions.py:345-346)
 
@@ -71,7 +71,7 @@ Format: `[{col.capitalize()}]: <<{value}>>\n` (guillemet characters `<<` va `>>`
 {"title":"AI Guide","author":"John"}
 ```
 
-Su dung `pandas.to_json(orient="records", lines=True)`. Moi row la 1 JSON object tren 1 dong.
+Sử dụng `pandas.to_json(orient="records", lines=True)`. Mỗi row là 1 JSON object trên 1 dòng.
 
 ### XML (task_instructions.py:347-359)
 
@@ -79,11 +79,11 @@ Su dung `pandas.to_json(orient="records", lines=True)`. Moi row la 1 JSON object
 <row><title>AI Guide</title><author>John</author></row>
 ```
 
-Su dung `pandas.to_xml()`. Column names duoc clean (loai bo special chars) truoc khi convert (task_instructions.py:356).
+Sử dụng `pandas.to_xml()`. Column names được clean (loại bỏ special chars) trước khi convert (task_instructions.py:356).
 
 ## df2multimodal_info (task_instructions.py:364)
 
-Function nay wrap `df2text` va them image data:
+Function này wrap `df2text` và thêm image data:
 
 ```python
 def df2multimodal_info(df: pd.DataFrame, cols: list[str]) -> list[dict[str, Any]]:
@@ -100,17 +100,17 @@ def df2multimodal_info(df: pd.DataFrame, cols: list[str]) -> list[dict[str, Any]
     return multimodal_data
 ```
 
-Output format cho moi row:
+Output format cho mỗi row:
 ```python
 {
     "text": "[Title]: <<AI Guide>>\n[Author]: <<John>>\n",
-    "image": {}  # hoac {"Photo": "data:image/png;base64,..."} neu co image column
+    "image": {}  # hoặc {"Photo": "data:image/png;base64,..."} nếu có image column
 }
 ```
 
 ## context_formatter (task_instructions.py:40)
 
-Convert multimodal_data thanh (text, image_inputs) cho LLM messages:
+Convert multimodal_data thành (text, image_inputs) cho LLM messages:
 
 ```python
 def context_formatter(multimodal_data):
@@ -133,7 +133,7 @@ def context_formatter(multimodal_data):
 
 ## user_message_formatter (task_instructions.py:68)
 
-Tao user message dict cho LLM:
+Tạo user message dict cho LLM:
 
 ```python
 def user_message_formatter(multimodal_data, user_instruction_with_tag=None):
@@ -149,12 +149,12 @@ def user_message_formatter(multimodal_data, user_instruction_with_tag=None):
     return {"role": "user", "content": content}
 ```
 
-- Text-only: `content` la string don gian
-- Multimodal: `content` la list of content parts (OpenAI vision format)
+- Text-only: `content` là string đơn giản
+- Multimodal: `content` là list of content parts (OpenAI vision format)
 
 ## merge_multimodal_info (task_instructions.py:382)
 
-Dung trong `sem_join` de ket hop 2 rows:
+Dùng trong `sem_join` để kết hợp 2 rows:
 
 ```python
 def merge_multimodal_info(first, second):
@@ -170,7 +170,7 @@ def merge_multimodal_info(first, second):
     ]
 ```
 
-Tao cross product: moi row cua first duoc merge voi moi row cua second. Text duoc noi bang newline, images duoc merge.
+Tạo cross product: mỗi row của first được merge với mỗi row của second. Text được nối bằng newline, images được merge.
 
 ## li2text (task_instructions.py:405)
 
@@ -179,4 +179,4 @@ def li2text(li: list[str], name: str) -> str:
     return "".join([f"[{name}] {li[i]}\n" for i in range(len(li))])
 ```
 
-Format list thanh text voi label prefix. Dung trong aggregation.
+Format list thành text với label prefix. Dùng trong aggregation.
