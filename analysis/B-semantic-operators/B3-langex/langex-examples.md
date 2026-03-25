@@ -1,6 +1,6 @@
 # B3 — Langex Expression Examples
 
-> **Vi du** ve cac langex expressions va cach chung duoc xu ly qua pipeline.
+> **Ví dụ** về các langex expressions và cách chúng được xử lý qua pipeline.
 
 ## 1. Langex Syntax
 
@@ -127,7 +127,7 @@ parse_cols("the {article} belongs to the {category}")
 # Merged: [{"text": "[Article]: «ML tutorial»\n\n[Category]: «Computer Science»\n", "image": {}}]
 ```
 
-**Step 4 — filter_formatter** (dung sem_filter noi bo):
+**Step 4 — filter_formatter** (dùng sem_filter nội bộ):
 ```
 System: The user will provide a claim and some relevant context...
 User: Context:
@@ -137,7 +137,7 @@ User: Context:
 Claim: the {article} belongs to the {category}
 ```
 
-Luu y: sem_join truyen `join_instruction` truc tiep cho sem_filter, KHONG dung nle2str.
+Lưu ý: sem_join truyền `join_instruction` trực tiếp cho sem_filter, KHÔNG dùng nle2str.
 
 ---
 
@@ -190,9 +190,9 @@ df.sem_extract(
 )
 ```
 
-**Flow**: Khong dung parse_cols! (sem_extract.py:222)
+**Flow**: Không dùng parse_cols! (sem_extract.py:222)
 ```python
-# input_cols = ["text"] — truyen truc tiep
+# input_cols = ["text"] — truyền trực tiếp
 # output_cols = {"sentiment": "positive/negative", "rating": "1-5"}
 ```
 
@@ -208,14 +208,14 @@ df.sem_filter("The {text} contains {{JSON}} data")
 **Step 1 — parse_cols**:
 ```python
 parse_cols("The {text} contains {{JSON}} data")
-# → ["text"]  ({{JSON}} duoc bo qua)
+# → ["text"]  ({{JSON}} được bỏ qua)
 ```
 
 **Step 4 — nle2str**:
 ```python
 nle2str("The {text} contains {{JSON}} data", ["text"])
 # → "The Text contains {JSON} data"
-# Luu y: Python .format() chuyen {{}} thanh {}
+# Lưu ý: Python .format() chuyển {{}} thành {}
 ```
 
 ## 3. Error Cases
