@@ -1,85 +1,85 @@
 # LOTUS Repository Map
 
-> **lotus-ai v1.1.4** -- Cay thu muc va mo ta chuc nang cua tung thanh phan.
+> **lotus-ai v1.1.4** -- Cây thư mục và mô tả chức năng của từng thành phần.
 > Build system: hatchling | Python package
 
 ## Directory Tree
 
 ```
-lotus/                              # Root package -- thu vien chinh
-|-- __init__.py                     # Entry point: export tat ca public API (__all__), dang ky sem_ops accessors
-|-- settings.py                     # Lop Settings: cau hinh toan cuc (lm, rm, helper_lm, reranker, vs, enable_cache, serialization_format)
-|-- types.py                        # Dinh nghia tat ca data types: LMOutput, LMStats, CascadeArgs, SemanticFilterOutput, v.v.
-|-- cache.py                        # He thong cache: InMemoryCache, SQLiteCache, CacheFactory, operator_cache decorator
-|-- nl_expression.py                # parse_cols() -- trich xuat {col} tu langex (natural language expression)
-|-- pricing.py                      # calculate_cost_from_response() -- tinh chi phi su dung litellm
-|-- utils.py                        # Tien ich chung: cluster(), fetch_image(), show_safe_mode()
-|-- long_context_strategy.py        # Xu ly van ban dai: ChunkedDocument, create_chunked_documents, TRUNCATE/CHUNK strategies
-|-- web_search.py                   # Tim kiem web: web_search (Google, Arxiv, You, Tavily, PubMed), web_extract
+lotus/                              # Root package -- thư viện chính
+|-- __init__.py                     # Entry point: export tất cả public API (__all__), đăng ký sem_ops accessors
+|-- settings.py                     # Lớp Settings: cấu hình toàn cục (lm, rm, helper_lm, reranker, vs, enable_cache, serialization_format)
+|-- types.py                        # Định nghĩa tất cả data types: LMOutput, LMStats, CascadeArgs, SemanticFilterOutput, v.v.
+|-- cache.py                        # Hệ thống cache: InMemoryCache, SQLiteCache, CacheFactory, operator_cache decorator
+|-- nl_expression.py                # parse_cols() -- trích xuất {col} từ langex (natural language expression)
+|-- pricing.py                      # calculate_cost_from_response() -- tính chi phí sử dụng litellm
+|-- utils.py                        # Tiện ích chung: cluster(), fetch_image(), show_safe_mode()
+|-- long_context_strategy.py        # Xử lý văn bản dài: ChunkedDocument, create_chunked_documents, TRUNCATE/CHUNK strategies
+|-- web_search.py                   # Tìm kiếm web: web_search (Google, Arxiv, You, Tavily, PubMed), web_extract
 |
-|-- models/                         # Cac lop mo hinh AI -- abstraction layer cho LLM va retrieval
-|   |-- __init__.py                 # Export cac lop model
-|   |-- lm.py                      # LM: Language Model wrapper (litellm-based), xu ly batching, caching, token counting
+|-- models/                         # Các lớp mô hình AI -- abstraction layer cho LLM và retrieval
+|   |-- __init__.py                 # Export các lớp model
+|   |-- lm.py                      # LM: Language Model wrapper (litellm-based), xử lý batching, caching, token counting
 |   |-- rm.py                      # RM: Retrieval Model (abstract base class)
 |   |-- reranker.py                # Reranker: abstract base class cho re-ranking
-|   |-- sentence_transformers_rm.py # SentenceTransformersRM: RM dung sentence-transformers embeddings
-|   |-- litellm_rm.py              # LiteLLMRM: RM dung litellm embeddings API
-|   |-- colbertv2_rm.py            # ColBERTv2RM: RM dung ColBERTv2 server
-|   |-- cross_encoder_reranker.py  # CrossEncoderReranker: Reranker dung cross-encoder model
+|   |-- sentence_transformers_rm.py # SentenceTransformersRM: RM dùng sentence-transformers embeddings
+|   |-- litellm_rm.py              # LiteLLMRM: RM dùng litellm embeddings API
+|   |-- colbertv2_rm.py            # ColBERTv2RM: RM dùng ColBERTv2 server
+|   |-- cross_encoder_reranker.py  # CrossEncoderReranker: Reranker dùng cross-encoder model
 |
-|-- sem_ops/                        # Semantic operators -- cot loi cua LOTUS, dang ky nhu pandas DataFrame accessors
-|   |-- __init__.py                 # Export tat ca sem_ops
-|   |-- sem_filter.py              # sem_filter: loc DataFrame theo dieu kien ngon ngu tu nhien
-|   |-- sem_map.py                 # sem_map: anh xa/chuyen doi cot bang LLM
-|   |-- sem_join.py                # sem_join: join 2 DataFrame theo ngu nghia (semantic join)
-|   |-- sem_agg.py                 # sem_agg: tong hop du lieu bang LLM (aggregate)
-|   |-- sem_topk.py                # sem_topk: chon top-K hang theo tieu chi ngon ngu tu nhien
-|   |-- sem_extract.py             # sem_extract: trich xuat thong tin tu cot sang cot moi
-|   |-- sem_search.py              # sem_search: tim kiem vector + reranking
-|   |-- sem_sim_join.py            # sem_sim_join: join theo do tuong dong vector (similarity join)
-|   |-- sem_dedup.py               # sem_dedup: loai bo ban sao theo do tuong dong (deduplication)
-|   |-- sem_index.py               # sem_index: tao index vector cho cot
-|   |-- sem_partition_by.py        # sem_partition_by: phan vung DataFrame theo ham partition
-|   |-- sem_cluster_by.py          # sem_cluster_by: phan cum DataFrame theo vector embeddings
-|   |-- cascade_utils.py           # Tien ich cho cascade optimization (helper model + main model)
-|   |-- postprocessors.py          # Hau xu ly output tu LLM (map_postprocess, extract_postprocess, v.v.)
-|   |-- load_sem_index.py          # load_sem_index: tai lai index da luu truoc do
+|-- sem_ops/                        # Semantic operators -- cốt lõi của LOTUS, đăng ký như pandas DataFrame accessors
+|   |-- __init__.py                 # Export tất cả sem_ops
+|   |-- sem_filter.py              # sem_filter: lọc DataFrame theo điều kiện ngôn ngữ tự nhiên
+|   |-- sem_map.py                 # sem_map: ánh xạ/chuyển đổi cột bằng LLM
+|   |-- sem_join.py                # sem_join: join 2 DataFrame theo ngữ nghĩa (semantic join)
+|   |-- sem_agg.py                 # sem_agg: tổng hợp dữ liệu bằng LLM (aggregate)
+|   |-- sem_topk.py                # sem_topk: chọn top-K hàng theo tiêu chí ngôn ngữ tự nhiên
+|   |-- sem_extract.py             # sem_extract: trích xuất thông tin từ cột sang cột mới
+|   |-- sem_search.py              # sem_search: tìm kiếm vector + reranking
+|   |-- sem_sim_join.py            # sem_sim_join: join theo độ tương đồng vector (similarity join)
+|   |-- sem_dedup.py               # sem_dedup: loại bỏ bản sao theo độ tương đồng (deduplication)
+|   |-- sem_index.py               # sem_index: tạo index vector cho cột
+|   |-- sem_partition_by.py        # sem_partition_by: phân vùng DataFrame theo hàm partition
+|   |-- sem_cluster_by.py          # sem_cluster_by: phân cụm DataFrame theo vector embeddings
+|   |-- cascade_utils.py           # Tiện ích cho cascade optimization (helper model + main model)
+|   |-- postprocessors.py          # Hậu xử lý output từ LLM (map_postprocess, extract_postprocess, v.v.)
+|   |-- load_sem_index.py          # load_sem_index: tải lại index đã lưu trước đó
 |
-|-- templates/                      # Prompt templates -- dinh dang prompt gui den LLM
+|-- templates/                      # Prompt templates -- định dạng prompt gửi đến LLM
 |   |-- __init__.py                 # Export templates
 |   |-- task_instructions.py       # filter_formatter, map_formatter, extract_formatter, df2text, df2multimodal_info
 |
-|-- vector_store/                   # Vector store backends -- luu tru va truy van vector embeddings
+|-- vector_store/                   # Vector store backends -- lưu trữ và truy vấn vector embeddings
 |   |-- __init__.py                 # Export vector stores
 |   |-- vs.py                      # VS: abstract base class cho vector store
-|   |-- faiss_vs.py                # FaissVS: vector store dung FAISS (mac dinh)
-|   |-- weaviate_vs.py             # WeaviateVS: vector store dung Weaviate
-|   |-- qdrant_vs.py               # QdrantVS: vector store dung Qdrant
+|   |-- faiss_vs.py                # FaissVS: vector store dùng FAISS (mặc định)
+|   |-- weaviate_vs.py             # WeaviateVS: vector store dùng Weaviate
+|   |-- qdrant_vs.py               # QdrantVS: vector store dùng Qdrant
 |
-|-- dtype_extensions/               # Pandas custom dtype -- mo rong kieu du lieu pandas
+|-- dtype_extensions/               # Pandas custom dtype -- mở rộng kiểu dữ liệu pandas
 |   |-- __init__.py                 # Export dtype extensions
-|   |-- image.py                   # ImageDtype + ImageArray: kieu du lieu hinh anh cho pandas DataFrame
+|   |-- image.py                   # ImageDtype + ImageArray: kiểu dữ liệu hình ảnh cho pandas DataFrame
 |
-|-- evals/                          # Evaluation tools -- danh gia chat luong bang LLM
+|-- evals/                          # Evaluation tools -- đánh giá chất lượng bằng LLM
 |   |-- __init__.py                 # Export eval functions
-|   |-- llm_as_judge.py           # llm_as_judge: dung LLM lam giam khao danh gia
-|   |-- pairwise_judge.py         # pairwise_judge: so sanh cap doi (pairwise comparison)
+|   |-- llm_as_judge.py           # llm_as_judge: dùng LLM làm giám khảo đánh giá
+|   |-- pairwise_judge.py         # pairwise_judge: so sánh cặp đôi (pairwise comparison)
 |
-|-- data_connectors/                # Ket noi du lieu -- doc du lieu tu nhieu nguon
+|-- data_connectors/                # Kết nối dữ liệu -- đọc dữ liệu từ nhiều nguồn
 |   |-- __init__.py                 # Export connectors
 |   |-- connectors.py             # Connectors: sqlalchemy, boto3, v.v.
 |
-|-- file_extractors/                # Trich xuat file -- doc noi dung tu nhieu dinh dang
+|-- file_extractors/                # Trích xuất file -- đọc nội dung từ nhiều định dạng
 |   |-- __init__.py                 # Export extractors
-|   |-- directory_reader.py        # Doc thu muc va cac file ben trong
-|   |-- pptx.py                    # Trich xuat noi dung tu file PowerPoint (.pptx)
+|   |-- directory_reader.py        # Đọc thư mục và các file bên trong
+|   |-- pptx.py                    # Trích xuất nội dung từ file PowerPoint (.pptx)
 ```
 
-## Kien truc tong quan
+## Kiến trúc tổng quan
 
 ```
                     +-------------------+
-                    |   lotus.settings  |  <-- Cau hinh toan cuc (LM, RM, VS, cache)
+                    |   lotus.settings  |  <-- Cấu hình toàn cục (LM, RM, VS, cache)
                     +-------------------+
                              |
                     +-------------------+
@@ -99,6 +99,6 @@ lotus/                              # Root package -- thu vien chinh
     +-------------------+
 ```
 
-**Nguyen tac hoat dong**: Nguoi dung goi `df.sem_filter(...)`, `df.sem_map(...)`, v.v. tren pandas DataFrame.
-Cac operator nay su dung `lotus.settings` de lay model (LM/RM), tao prompt tu `lotus.templates`,
-goi LLM qua `lotus.models.LM`, va tra ket qua ve dang DataFrame moi.
+**Nguyên tắc hoạt động**: Người dùng gọi `df.sem_filter(...)`, `df.sem_map(...)`, v.v. trên pandas DataFrame.
+Các operator này sử dụng `lotus.settings` để lấy model (LM/RM), tạo prompt từ `lotus.templates`,
+gọi LLM qua `lotus.models.LM`, và trả kết quả về dạng DataFrame mới.
