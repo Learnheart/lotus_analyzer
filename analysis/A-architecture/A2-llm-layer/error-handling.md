@@ -2,7 +2,7 @@
 
 ## Custom Exceptions
 
-Dinh nghia tai `types.py:226-235`:
+Định nghĩa tại `types.py:226-235`:
 
 ```python
 class LotusException(Exception):
@@ -38,12 +38,12 @@ def _get_top_choice(self, response: ModelResponse) -> str:
     return choice.message.content
 ```
 
-`litellm.batch_completion` co the tra ve exception objects thay vi `ModelResponse` khi loi xay ra. LM kiem tra `isinstance(response, (AuthenticationError, OpenAIError))` va re-raise chung.
+`litellm.batch_completion` có thể trả về exception objects thay vì `ModelResponse` khi lỗi xảy ra. LM kiểm tra `isinstance(response, (AuthenticationError, OpenAIError))` và re-raise chúng.
 
-- `AuthenticationError`: import tu `litellm.exceptions` (lm.py:11)
-- `OpenAIError`: import tu `openai._exceptions` (lm.py:14)
+- `AuthenticationError`: import từ `litellm.exceptions` (lm.py:11)
+- `OpenAIError`: import từ `openai._exceptions` (lm.py:14)
 
-### Tuong tu cho logprobs (lm.py:496-505):
+### Tương tự cho logprobs (lm.py:496-505):
 
 ```python
 def _get_top_choice_logprobs(self, response: ModelResponse) -> list[ChatCompletionTokenLogprob]:
@@ -61,7 +61,7 @@ def _cache_response(self, response: ModelResponse, hash: str) -> None:
     self.cache.insert(hash, response)
 ```
 
-Khong cache error responses, raise chung thay vi luu vao cache.
+Không cache error responses, raise chúng thay vì lưu vào cache.
 
 ### Usage limit check (lm.py:419-427)
 
@@ -76,7 +76,7 @@ def _check_usage_limit(self, usage: LMStats.TotalUsage, limit: UsageLimit, usage
         raise LotusUsageLimitException(...)
 ```
 
-Duoc goi sau moi `_update_stats` (lm.py:478, 483). Kiem tra ca virtual va physical limits.
+Được gọi sau mỗi `_update_stats` (lm.py:478, 483). Kiểm tra cả virtual và physical limits.
 
 ### TPM limit validation (lm.py:323-329)
 
@@ -90,17 +90,17 @@ if total_est > max_allowed_tpm:
     )
 ```
 
-Pre-check truoc khi gui request: neu 1 row co token count > 95% TPM limit, khong co cach nao gui duoc.
+Pre-check trước khi gửi request: nếu 1 row có token count > 95% TPM limit, không có cách nào gửi được.
 
 ## Retry Mechanism
 
-LOTUS phu thuoc vao `backoff` package (duoc list trong dependencies) cho retry logic. Tuy nhien, retry duoc implement boi `litellm` ben trong `batch_completion`, khong phai boi LOTUS code truc tiep.
+LOTUS phụ thuộc vào `backoff` package (được list trong dependencies) cho retry logic. Tuy nhiên, retry được implement bởi `litellm` bên trong `batch_completion`, không phải bởi LOTUS code trực tiếp.
 
 ## Operator-level Error Handling
 
 ### Settings validation
 
-Moi operator kiem tra model configuration:
+Mỗi operator kiểm tra model configuration:
 
 ```python
 # sem_filter.py:351-354
@@ -110,7 +110,7 @@ if lotus.settings.lm is None:
     )
 ```
 
-Tuong tu cho RM/VS operators:
+Tương tự cho RM/VS operators:
 ```python
 # sem_search.py:106-109
 if rm is None or vs is None:
@@ -137,7 +137,7 @@ if not matches:
     )
 ```
 
-Bao loi khi user instruction khong chua bat ky `{column}` reference nao.
+Báo lỗi khi user instruction không chứa bất kỳ `{column}` reference nào.
 
 ## Postprocessor Default Values
 
@@ -158,9 +158,9 @@ def process_outputs(answer):
         return default
 ```
 
-- Khi LLM output khong chua "True" hoac "False", dung `default` parameter (default `True` - sem_filter.py:28)
-- Log info message nhung khong raise exception
-- Day la "soft failure" - operator van tiep tuc hoat dong
+- Khi LLM output không chứa "True" hoặc "False", dùng `default` parameter (default `True` - sem_filter.py:28)
+- Log info message nhưng không raise exception
+- Đây là "soft failure" - operator vẫn tiếp tục hoạt động
 
 ### extract_postprocess (postprocessors.py:170-177)
 
@@ -172,7 +172,7 @@ except json.JSONDecodeError:
     output = {}
 ```
 
-Khi LLM tra ve JSON khong hop le, return empty dict `{}`.
+Khi LLM trả về JSON không hợp lệ, return empty dict `{}`.
 
 ### parse_ans_binary cho sem_topk (sem_topk.py:127-129)
 
@@ -182,7 +182,7 @@ except Exception:
     return True, cot_explanation
 ```
 
-Khi khong parse duoc "Document 1" hay "Document 2", default chon Document 1.
+Khi không parse được "Document 1" hay "Document 2", default chọn Document 1.
 
 ## Cascade Error Handling
 
@@ -212,7 +212,7 @@ except Exception as e:
     return 1.0, 0.0, len(sample_indices)
 ```
 
-Khac voi filter: khong re-raise, thay vao do fallback ve full join (pos=1.0, neg=0.0 nghia la moi row deu la "low confidence" va duoc gui den oracle LM).
+Khác với filter: không re-raise, thay vào đó fallback về full join (pos=1.0, neg=0.0 nghĩa là mỗi row đều là "low confidence" và được gửi đến oracle LM).
 
 ## Cost calculation error (pricing.py:26-33)
 
@@ -225,4 +225,4 @@ except Exception as e:
     return None
 ```
 
-Khong bao gio fail voi exception tu pricing - tra ve `None` va log debug. Warning duoc emit o caller (lm.py:474).
+Không bao giờ fail với exception từ pricing - trả về `None` và log debug. Warning được emit ở caller (lm.py:474).

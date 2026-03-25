@@ -1,6 +1,6 @@
 # Architecture Diagram — LOTUS
 
-## Tong the: So do ASCII toan bo kien truc
+## Tổng thể: Sơ đồ ASCII toàn bộ kiến trúc
 
 ```
 +==============================================================================+
@@ -128,7 +128,7 @@
 
 ---
 
-## Data Flow: Mot query dien hinh
+## Data Flow: Một query điển hình
 
 ```
 df.sem_filter("Is {text} positive?")
@@ -138,10 +138,10 @@ df.sem_filter("Is {text} positive?")
   |
   v
 [2] task_instructions.df2multimodal_info(df, ["text"])
-  |   Chuyen moi row thanh dict: {"text": "...", "images": [...]}
+  |   Chuyển mỗi row thành dict: {"text": "...", "images": [...]}
   v
 [3] task_instructions.filter_formatter(model, doc, instruction, ...)
-  |   Tao prompt cho moi row
+  |   Tạo prompt cho mỗi row
   v
 [4] model(inputs)  →  LM.__call__(messages)
   |   |
@@ -151,7 +151,7 @@ df.sem_filter("Is {text} positive?")
   |   +-- Return LMOutput
   v
 [5] filter_postprocess(outputs)  →  [True, False, True, ...]
-  |   Parse "True"/"False" tu LLM output (postprocessors.py:182-218)
+  |   Parse "True"/"False" từ LLM output (postprocessors.py:182-218)
   v
 [6] Return filtered DataFrame
 ```

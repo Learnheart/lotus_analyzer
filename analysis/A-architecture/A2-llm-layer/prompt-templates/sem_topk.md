@@ -2,7 +2,7 @@
 
 ## Formatter Function
 
-`get_match_prompt_binary` tai `sem_topk.py:16`:
+`get_match_prompt_binary` tại `sem_topk.py:16`:
 
 ```python
 def get_match_prompt_binary(
@@ -37,7 +37,7 @@ NUMBER must be either 1 or 2, depending on which document is most relevant.
 You must pick a number and cannot say things like "None" or "Neither"
 ```
 
-Luu y: co typo "to to" (sem_topk.py:53).
+Lưu ý: có typo "to to" (sem_topk.py:53).
 
 ### ZS_COT - sem_topk.py:52-58
 
@@ -62,7 +62,7 @@ deepseek_instructions = """Please think through your reasoning step by step, the
 prompt += [{"type": "text", "text": f"\n{deepseek_instructions}"}]
 ```
 
-Luu y: co typo "insdie" (sem_topk.py:74).
+Lưu ý: có typo "insdie" (sem_topk.py:74).
 
 ## User Message Format
 
@@ -73,7 +73,7 @@ for idx, doc in enumerate([doc1, doc2]):
     prompt += [{"type": "text", "text": f"\nDocument {idx+1}:\n{content_text}"}, *content_image_inputs]
 ```
 
-Vi du:
+Ví dụ:
 ```
 Question: Which tutorial is best for beginners?
 
@@ -97,11 +97,11 @@ messages = [
 ]
 ```
 
-Luu y: `content` luon la list of content parts (multimodal format), ke ca khi khong co images (sem_topk.py:67-78).
+Lưu ý: `content` luôn là list of content parts (multimodal format), kể cả khi không có images (sem_topk.py:67-78).
 
 ## Response Parsing
 
-`parse_ans_binary` tai `sem_topk.py:83`:
+`parse_ans_binary` tại `sem_topk.py:83`:
 
 ```python
 def parse_ans_binary(answer: str) -> tuple[bool, str]:
@@ -129,37 +129,37 @@ def parse_ans_binary(answer: str) -> tuple[bool, str]:
     return ans == 0, cot_explanation
 ```
 
-- Tim "Document 1" hoac "Document 2" trong response
-- Fallback: tim bat ky so nao
-- Default: `True` (Document 1 thang) khi khong parse duoc
+- Tìm "Document 1" hoặc "Document 2" trong response
+- Fallback: tìm bất kỳ số nào
+- Default: `True` (Document 1 thắng) khi không parse được
 
 ## Sorting Algorithms
 
-`sem_topk` su dung binary comparison cho nhieu thuat toan:
+`sem_topk` sử dụng binary comparison cho nhiều thuật toán:
 
 ### 1. llm_quicksort (sem_topk.py:347)
-- Modified quicksort chi sort top-K
-- `compare_batch_binary()` (sem_topk.py:132) so sanh batch documents voi pivot
-- O(n log n) expected, nhung chi sort deep cho top-K
+- Modified quicksort chỉ sort top-K
+- `compare_batch_binary()` (sem_topk.py:132) so sánh batch documents với pivot
+- O(n log n) expected, nhưng chỉ sort deep cho top-K
 
 ### 2. llm_heapsort (sem_topk.py:560)
-- Su dung `heapq.nsmallest(K, heap)` (sem_topk.py:613)
-- `HeapDoc.__lt__` (sem_topk.py:526) goi LLM de so sanh
+- Sử dụng `heapq.nsmallest(K, heap)` (sem_topk.py:613)
+- `HeapDoc.__lt__` (sem_topk.py:526) gọi LLM để so sánh
 - O(n log K)
 
 ### 3. llm_naive_sort (sem_topk.py:276)
 - All-pairs comparison: O(n^2)
-- Moi cap duoc so sanh, doc co nhieu "wins" xep cao hon
+- Mỗi cặp được so sánh, doc có nhiều "wins" xếp cao hơn
 
 ### 4. Cascade variant (sem_topk.py:176)
-- `compare_batch_binary_cascade()`: dung helper_lm truoc, chi gui low-confidence pairs den oracle
+- `compare_batch_binary_cascade()`: dùng helper_lm trước, chỉ gửi low-confidence pairs đến oracle
 
-## Phan tich
+## Phân tích
 
-1. **Binary comparison**: Thay vi rank tat ca documents cung luc, `sem_topk` chi so sanh 2 documents moi lan. Day la pairwise comparison paradigm.
+1. **Binary comparison**: Thay vì rank tất cả documents cùng lúc, `sem_topk` chỉ so sánh 2 documents mỗi lần. Đây là pairwise comparison paradigm.
 
-2. **Position bias**: Document 1 luon duoc liet ke truoc Document 2. Khong co randomization cua thu tu documents. Khi parse that bai, default chon Document 1 (`return True`), tao subtle bias.
+2. **Position bias**: Document 1 luôn được liệt kê trước Document 2. Không có randomization của thứ tự documents. Khi parse thất bại, default chọn Document 1 (`return True`), tạo subtle bias.
 
-3. **Multimodal format luon duoc su dung**: User content luon la list of parts, ke ca text-only (sem_topk.py:67-78). Dieu nay khac voi `filter_formatter` va `map_formatter` (dung string khi khong co images).
+3. **Multimodal format luôn được sử dụng**: User content luôn là list of parts, kể cả text-only (sem_topk.py:67-78). Điều này khác với `filter_formatter` và `map_formatter` (dùng string khi không có images).
 
-4. **Khong co few-shot**: `get_match_prompt_binary` khong ho tro examples.
+4. **Không có few-shot**: `get_match_prompt_binary` không hỗ trợ examples.

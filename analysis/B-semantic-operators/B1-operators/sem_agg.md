@@ -9,7 +9,7 @@
 
 ## 1. Purpose & Use Cases
 
-Tong hop nhieu rows thanh mot ket qua duy nhat. Su dung hierarchical tree: leaf nodes xu ly documents goc, intermediate nodes gop cac summaries lai.
+Tổng hợp nhiều rows thành một kết quả duy nhất. Sử dụng hierarchical tree: leaf nodes xử lý documents gốc, intermediate nodes gộp các summaries lại.
 
 **Use cases:**
 - Summarization: `df.sem_agg("Summarize the key points", all_cols=True)`
@@ -20,17 +20,17 @@ Tong hop nhieu rows thanh mot ket qua duy nhat. Su dung hierarchical tree: leaf 
 
 ```
 1. SemAggDataframe.__call__()                           # sem_agg.py:354
-2.   [Neu all_cols]: col_li = list(df.columns)          # sem_agg.py:370-371
+2.   [Nếu all_cols]: col_li = list(df.columns)          # sem_agg.py:370-371
 2b.  [Else]: parse_cols(user_instruction)               # sem_agg.py:373
 3.   Column validation                                  # sem_agg.py:377-379
-4.   [Neu group_by]:
+4.   [Nếu group_by]:
 4a.    df.groupby(group_by)                              # sem_agg.py:382
 4b.    ThreadPoolExecutor → process_group() parallel     # sem_agg.py:396-399
 4c.    process_group → recursive sem_agg call            # sem_agg.py:326-351
-5.   [Neu _lotus_partition_id exists]:
+5.   [Nếu _lotus_partition_id exists]:
 5a.    Sort by partition_id                              # sem_agg.py:402-404
 6.   nle2str(user_instruction, col_li)                  # sem_agg.py:408
-7.   [Neu long_context_strategy TRUNCATE/CHUNK]:
+7.   [Nếu long_context_strategy TRUNCATE/CHUNK]:
 7a.    create_chunked_documents()                        # sem_agg.py:418-419
 8.   [Else]: df2text(df, col_li)                        # sem_agg.py:427
 9.   sem_agg(docs, lm, ...)                             # sem_agg.py:431-438
@@ -40,8 +40,8 @@ Tong hop nhieu rows thanh mot ket qua duy nhat. Su dung hierarchical tree: leaf 
 10c.   Token-aware batching: check context fits          # sem_agg.py:183-185
 10d.   Partition boundary check                          # sem_agg.py:184
 10e.   model(batch, ...)                                 # sem_agg.py:211
-10f.   Loop lai voi summaries cho den khi len=1          # sem_agg.py:164
-11.  Return DataFrame voi 1 row                         # sem_agg.py:441
+10f.   Loop lại với summaries cho đến khi len=1          # sem_agg.py:164
+11.  Return DataFrame với 1 row                         # sem_agg.py:441
 ```
 
 ## 3. Prompt Template (COPY VERBATIM)
@@ -115,52 +115,52 @@ Answer:
 ## 4. LLM Interaction
 
 - **Model**: `lotus.settings.lm` (sem_agg.py:431)
-- **Token-aware batching**: Dem tokens cua moi document, gop vao batch cho den khi dat `model.max_ctx_len - model.max_tokens` (sem_agg.py:183)
+- **Token-aware batching**: Đếm tokens của mỗi document, gộp vào batch cho đến khi đạt `model.max_ctx_len - model.max_tokens` (sem_agg.py:183)
 - **Hierarchical processing**:
-  - Level 0: Gop raw documents thanh summaries
-  - Level 1+: Gop summaries thanh meta-summaries
-  - Loop cho den khi chi con 1 summary (sem_agg.py:164)
-- **Template tokens**: Tinh template tokens rieng de dam bao khong vuot context window (sem_agg.py:174)
+  - Level 0: Gộp raw documents thành summaries
+  - Level 1+: Gộp summaries thành meta-summaries
+  - Loop cho đến khi chỉ còn 1 summary (sem_agg.py:164)
+- **Template tokens**: Tính template tokens riêng để đảm bảo không vượt context window (sem_agg.py:174)
 
 ## 5. Optimization
 
-| Feature | Status | Chi tiet |
+| Feature | Status | Chi tiết |
 |---|---|---|
 | Batching | Yes | Token-aware batching trong tree (sem_agg.py:183-185) |
 | Caching | Yes | `@operator_cache` (sem_agg.py:353) |
 | Cascading | No | |
 | Early-termination | No | |
 | Sampling | No | |
-| Safe mode | Partial | Chua implement (sem_agg.py:151-153) |
+| Safe mode | Partial | Chưa implement (sem_agg.py:151-153) |
 | Parallel group_by | Yes | ThreadPoolExecutor (sem_agg.py:398) |
-| Long context | Yes | TRUNCATE va CHUNK strategies (sem_agg.py:362, 413-419) |
+| Long context | Yes | TRUNCATE và CHUNK strategies (sem_agg.py:362, 413-419) |
 
-### Hierarchical Tree chi tiet:
-1. **Token counting**: `model.count_tokens(formatted_doc)` cho moi document (sem_agg.py:181)
-2. **Batch splitting**: Khi `new_tokens + context_tokens + template_tokens > max_ctx_len - max_tokens` thi dong batch hien tai (sem_agg.py:183)
-3. **Partition awareness**: Khi `partition_id != cur_partition_id and not do_fold` thi dong batch (sem_agg.py:184-185). `do_fold` = True khi moi document co partition_id khac nhau (sem_agg.py:166)
+### Hierarchical Tree chi tiết:
+1. **Token counting**: `model.count_tokens(formatted_doc)` cho mỗi document (sem_agg.py:181)
+2. **Batch splitting**: Khi `new_tokens + context_tokens + template_tokens > max_ctx_len - max_tokens` thì đóng batch hiện tại (sem_agg.py:183)
+3. **Partition awareness**: Khi `partition_id != cur_partition_id and not do_fold` thì đóng batch (sem_agg.py:184-185). `do_fold` = True khi mỗi document có partition_id khác nhau (sem_agg.py:166)
 
 ## 6. Input/Output Contract
 
 ### Input:
 - `user_instruction: str` — Langex instruction (sem_agg.py:355)
-- `all_cols: bool` — Neu True, dung tat ca columns (sem_agg.py:357, default=False)
-- `suffix: str` — Ten column output, default `"_output"` (sem_agg.py:358)
-- `group_by: list[str]` — Columns de group by (sem_agg.py:359)
-- `long_context_strategy: LongContextStrategy` — TRUNCATE hoac CHUNK (sem_agg.py:362, default=CHUNK)
+- `all_cols: bool` — Nếu True, dùng tất cả columns (sem_agg.py:357, default=False)
+- `suffix: str` — Tên column output, default `"_output"` (sem_agg.py:358)
+- `group_by: list[str]` — Columns để group by (sem_agg.py:359)
+- `long_context_strategy: LongContextStrategy` — TRUNCATE hoặc CHUNK (sem_agg.py:362, default=CHUNK)
 
 ### Output:
-- DataFrame voi 1 row (hoac 1 row per group) va column `suffix` (sem_agg.py:441)
-- Neu group_by: concat tat ca group results + group_by columns (sem_agg.py:350-351, 399)
+- DataFrame với 1 row (hoặc 1 row per group) và column `suffix` (sem_agg.py:441)
+- Nếu group_by: concat tất cả group results + group_by columns (sem_agg.py:350-351, 399)
 
 ## 7. Edge Cases
 
-1. **Column khong ton tai**: Raise `ValueError` (sem_agg.py:378-379)
-2. **LM chua configure**: Raise `ValueError` (sem_agg.py:364-367)
-3. **Single document**: Van chay qua tree, output 1 summary (sem_agg.py:164, 205)
-4. **Partition boundary**: Neu _lotus_partition_id ton tai, sort va tach batch theo partition (sem_agg.py:402-404)
-5. **Empty group**: Khi group_by co group rong, van chay nhung output rong
-6. **Very long documents**: Token-aware batching tu dong tach, nhung 1 doc dai hon context window se bi TRUNCATE hoac CHUNK (sem_agg.py:413-419)
+1. **Column không tồn tại**: Raise `ValueError` (sem_agg.py:378-379)
+2. **LM chưa configure**: Raise `ValueError` (sem_agg.py:364-367)
+3. **Single document**: Vẫn chạy qua tree, output 1 summary (sem_agg.py:164, 205)
+4. **Partition boundary**: Nếu _lotus_partition_id tồn tại, sort và tách batch theo partition (sem_agg.py:402-404)
+5. **Empty group**: Khi group_by có group rỗng, vẫn chạy nhưng output rỗng
+6. **Very long documents**: Token-aware batching tự động tách, nhưng 1 doc dài hơn context window sẽ bị TRUNCATE hoặc CHUNK (sem_agg.py:413-419)
 
 ## 8. Code Examples
 
@@ -171,27 +171,27 @@ df.sem_agg("Summarize the key points", all_cols=True)
 # Grouped aggregation
 df.sem_agg("Summarize the {journal}", group_by=["date"])
 
-# Voi partition (sau sem_partition_by)
+# Với partition (sau sem_partition_by)
 df = df.sem_index("text", "text_idx") \
        .sem_partition_by(lotus.utils.cluster("text", 3))
 df.sem_agg("Summarize {text}")
 
-# Voi long context strategy
+# Với long context strategy
 from lotus.types import LongContextStrategy
 df.sem_agg("Summarize all {text}", long_context_strategy=LongContextStrategy.CHUNK)
 ```
 
 ## 9. Assessment
 
-### Diem manh:
-- **Hierarchical tree**: Xu ly so luong document lon bang cach gop dan, khong bi gioi han boi context window
-- **Token-aware batching**: Tinh chinh xac token count, dam bao khong vuot context
-- **Partition integration**: Tuong thich voi sem_partition_by de toi uu chat luong tong hop
+### Điểm mạnh:
+- **Hierarchical tree**: Xử lý số lượng document lớn bằng cách gộp dần, không bị giới hạn bởi context window
+- **Token-aware batching**: Tính chính xác token count, đảm bảo không vượt context
+- **Partition integration**: Tương thích với sem_partition_by để tối ưu chất lượng tổng hợp
 - **Parallel group_by**: ThreadPoolExecutor cho grouped aggregation
 
-### Diem yeu:
-- **Safe mode chua implement**: TODO tai sem_agg.py:151-153
-- **Information loss**: Hierarchical approach co the mat thong tin chi tiet qua moi level
-- **No streaming**: Khong ho tro streaming output cho long aggregations
-- **Validate weak**: `_validate()` la `pass` (sem_agg.py:323) — khong kiem tra gi ca
-- **do_fold logic**: `do_fold = len(partition_ids) == len(set(partition_ids))` (sem_agg.py:166) — kho hieu, chi True khi moi doc co partition_id khac nhau
+### Điểm yếu:
+- **Safe mode chưa implement**: TODO tại sem_agg.py:151-153
+- **Information loss**: Hierarchical approach có thể mất thông tin chi tiết qua mỗi level
+- **No streaming**: Không hỗ trợ streaming output cho long aggregations
+- **Validate weak**: `_validate()` là `pass` (sem_agg.py:323) — không kiểm tra gì cả
+- **do_fold logic**: `do_fold = len(partition_ids) == len(set(partition_ids))` (sem_agg.py:166) — khó hiểu, chỉ True khi mỗi doc có partition_id khác nhau

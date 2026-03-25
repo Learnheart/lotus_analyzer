@@ -2,7 +2,7 @@
 
 ## LMStats Dataclass
 
-Dinh nghia tai `types.py:20`:
+Định nghĩa tại `types.py:20`:
 
 ```python
 @dataclass
@@ -22,17 +22,17 @@ class LMStats:
     operator_cache_hits: int = 0
 ```
 
-### Hai loai usage:
-- **virtual_usage** (types.py:53): Tong usage NHU THE khong co caching. Cap nhat cho moi response, ke ca cached. Phan anh "chi phi that" neu khong dung cache.
-- **physical_usage** (types.py:55): Usage thuc te voi caching. Chi cap nhat cho uncached responses.
-- **cache_hits** (types.py:57): So LM responses lay tu cache.
-- **operator_cache_hits** (types.py:58): So operator results lay tu operator cache.
+### Hai loại usage:
+- **virtual_usage** (types.py:53): Tổng usage NHƯ THỂ không có caching. Cập nhật cho mọi response, kể cả cached. Phản ánh "chi phí thật" nếu không dùng cache.
+- **physical_usage** (types.py:55): Usage thực tế với caching. Chỉ cập nhật cho uncached responses.
+- **cache_hits** (types.py:57): Số LM responses lấy từ cache.
+- **operator_cache_hits** (types.py:58): Số operator results lấy từ operator cache.
 
-### TotalUsage ho tro arithmetic (types.py:32-50):
+### TotalUsage hỗ trợ arithmetic (types.py:32-50):
 - `__sub__`: `usage1 - usage2` -> difference
 - `__add__`: `usage1 + usage2` -> sum
 
-Duoc su dung trong operator_cache de tinh virtual usage delta (cache.py:93).
+Được sử dụng trong operator_cache để tính virtual usage delta (cache.py:93).
 
 ## Cost Calculation
 
@@ -50,9 +50,9 @@ def calculate_cost_from_response(response) -> Optional[float]:
         return None
 ```
 
-- Su dung `litellm.completion_cost` (pricing.py:5) - database gia duoc litellm maintain
-- Tra ve `None` neu model khong co trong pricing database
-- Xu ly graceful: khong raise exception, chi log warning
+- Sử dụng `litellm.completion_cost` (pricing.py:5) - database giá được litellm maintain
+- Trả về `None` nếu model không có trong pricing database
+- Xử lý graceful: không raise exception, chỉ log warning
 
 ### _update_stats flow (lm.py:451-483)
 
@@ -97,7 +97,7 @@ def _update_usage_stats(self, usage: LMStats.TotalUsage, response: ModelResponse
             usage.cache_creation_tokens += cache_creation_tokens
 ```
 
-Dac biet theo doi `cached_prompt_tokens` va `cache_creation_tokens` tu `prompt_tokens_details` (lm.py:438-449). Day la provider-level prompt caching (e.g. OpenAI), khong phai LOTUS cache.
+Đặc biệt theo dõi `cached_prompt_tokens` và `cache_creation_tokens` từ `prompt_tokens_details` (lm.py:438-449). Đây là provider-level prompt caching (e.g. OpenAI), không phải LOTUS cache.
 
 ## Usage Limits
 
@@ -112,7 +112,7 @@ class UsageLimit:
     total_cost_limit: float = float("inf")
 ```
 
-Default: khong co gioi han (infinity).
+Default: không có giới hạn (infinity).
 
 ### _check_usage_limit (lm.py:419-427)
 
@@ -127,11 +127,11 @@ def _check_usage_limit(self, usage: LMStats.TotalUsage, limit: UsageLimit, usage
         raise LotusUsageLimitException(f"Usage limit exceeded. Current {usage_type} usage: {usage}, Limit: {limit}")
 ```
 
-- Kiem tra sau moi response update
-- Raise `LotusUsageLimitException` (types.py:232) khi vuot bat ky limit nao
-- Kiem tra rieng cho virtual va physical usage
+- Kiểm tra sau mỗi response update
+- Raise `LotusUsageLimitException` (types.py:232) khi vượt bất kỳ limit nào
+- Kiểm tra riêng cho virtual và physical usage
 
-### Cach su dung:
+### Cách sử dụng:
 
 ```python
 lm = LM(
@@ -164,11 +164,11 @@ def reset_stats(self):
     self.stats = LMStats()
 ```
 
-Tao moi LMStats instance, reset tat ca counters.
+Tạo mới LMStats instance, reset tất cả counters.
 
 ## Safe Mode
 
-Mot so operators ho tro `safe_mode` parameter. Khi bat, operator uoc tinh token usage truoc khi goi LM:
+Một số operators hỗ trợ `safe_mode` parameter. Khi bật, operator ước tính token usage trước khi gọi LM:
 
 ```python
 # sem_filter.py:107-110
@@ -178,7 +178,7 @@ if safe_mode:
     show_safe_mode(estimated_total_cost, estimated_total_calls)
 ```
 
-Va in usage thuc te sau khi hoan thanh:
+Và in usage thực tế sau khi hoàn thành:
 ```python
 # sem_filter.py:121-122
 if safe_mode:

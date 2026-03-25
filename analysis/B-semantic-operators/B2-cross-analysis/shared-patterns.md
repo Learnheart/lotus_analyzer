@@ -1,10 +1,10 @@
 # B2 — Shared Patterns Across Operators
 
-> **Phan tich** cac patterns chung giua tat ca semantic operators trong LOTUS.
+> **Phân tích** các patterns chung giữa tất cả semantic operators trong LOTUS.
 
 ## 1. DataFrame Accessor Pattern
 
-**Tat ca** operators dung `@pd.api.extensions.register_dataframe_accessor`:
+**Tất cả** operators dùng `@pd.api.extensions.register_dataframe_accessor`:
 
 | Operator | Registration | File:Line |
 |---|---|---|
@@ -21,14 +21,14 @@
 | sem_partition_by | `@pd.api.extensions.register_dataframe_accessor("sem_partition_by")` | sem_partition_by.py:8 |
 | sem_cluster_by | `@pd.api.extensions.register_dataframe_accessor("sem_cluster_by")` | sem_cluster_by.py:10 |
 
-**Pattern structure**: Moi accessor class co:
-- `__init__(self, pandas_obj)` — luu `self._obj = pandas_obj`
-- `_validate(obj)` — static method kiem tra input la DataFrame
-- `__call__(self, ...)` — logic chinh, duoc goi khi user dung `df.sem_xxx(...)`
+**Pattern structure**: Mỗi accessor class có:
+- `__init__(self, pandas_obj)` — lưu `self._obj = pandas_obj`
+- `_validate(obj)` — static method kiểm tra input là DataFrame
+- `__call__(self, ...)` — logic chính, được gọi khi user dùng `df.sem_xxx(...)`
 
 ## 2. `@operator_cache` Decorator
 
-**Tat ca** operators dung `@operator_cache` (cache.py:33-100) tren `__call__`:
+**Tất cả** operators dùng `@operator_cache` (cache.py:33-100) trên `__call__`:
 
 | Operator | Cache line |
 |---|---|
@@ -45,15 +45,15 @@
 | sem_partition_by | sem_partition_by.py:60 |
 | sem_cluster_by | sem_cluster_by.py:57 |
 
-**Cach hoat dong** (cache.py:33-100):
-1. Serialize `self._obj` (DataFrame), args, kwargs thanh JSON (cache.py:69-71)
-2. Hash SHA-256 lam cache key (cache.py:72-76)
+**Cách hoạt động** (cache.py:33-100):
+1. Serialize `self._obj` (DataFrame), args, kwargs thành JSON (cache.py:69-71)
+2. Hash SHA-256 làm cache key (cache.py:72-76)
 3. Check cache hit (cache.py:79-88)
-4. Neu miss: chay function, luu result + virtual_usage vao cache (cache.py:91-96)
+4. Nếu miss: chạy function, lưu result + virtual_usage vào cache (cache.py:91-96)
 
 ## 3. Langex Parsing (`parse_cols`)
 
-**Hau het** LLM-based operators dung `lotus.nl_expression.parse_cols()` (nl_expression.py:4):
+**Hầu hết** LLM-based operators dùng `lotus.nl_expression.parse_cols()` (nl_expression.py:4):
 
 | Operator | parse_cols usage | File:Line |
 |---|---|---|
@@ -62,13 +62,13 @@
 | sem_join | `cols = lotus.nl_expression.parse_cols(join_instruction)` | sem_join.py:699 |
 | sem_agg | `col_li = lotus.nl_expression.parse_cols(user_instruction)` | sem_agg.py:373 |
 | sem_topk | `col_li = lotus.nl_expression.parse_cols(user_instruction)` | sem_topk.py:754 |
-| sem_extract | Khong dung — dung `input_cols` parameter truc tiep | — |
+| sem_extract | Không dùng — dùng `input_cols` parameter trực tiếp | — |
 
-**Ngoai le**: sem_extract dung `input_cols` list thay vi langex (sem_extract.py:203). Tat ca embedding-based operators (sem_search, sem_sim_join, sem_dedup, sem_index, sem_cluster_by, sem_partition_by) khong dung parse_cols vi khong co langex.
+**Ngoại lệ**: sem_extract dùng `input_cols` list thay vì langex (sem_extract.py:203). Tất cả embedding-based operators (sem_search, sem_sim_join, sem_dedup, sem_index, sem_cluster_by, sem_partition_by) không dùng parse_cols vì không có langex.
 
 ## 4. Data Serialization (`df2multimodal_info`)
 
-**Hau het** LLM-based operators dung `task_instructions.df2multimodal_info()` (task_instructions.py:364-379):
+**Hầu hết** LLM-based operators dùng `task_instructions.df2multimodal_info()` (task_instructions.py:364-379):
 
 | Operator | df2multimodal_info usage | File:Line |
 |---|---|---|
@@ -78,17 +78,17 @@
 | sem_topk | `multimodal_data = task_instructions.df2multimodal_info(self._obj, col_li)` | sem_topk.py:790 |
 | sem_extract | `multimodal_data = task_instructions.df2multimodal_info(self._obj, input_cols)` | sem_extract.py:226 |
 
-**Ngoai le**: sem_agg dung `df2text()` hoac `create_chunked_documents()` tuy theo strategy (sem_agg.py:418-427).
+**Ngoại lệ**: sem_agg dùng `df2text()` hoặc `create_chunked_documents()` tùy theo strategy (sem_agg.py:418-427).
 
 **df2multimodal_info flow** (task_instructions.py:364-379):
-1. Tach image columns va text columns (task_instructions.py:369-370)
+1. Tách image columns và text columns (task_instructions.py:369-370)
 2. Format text columns qua `df2text()` (task_instructions.py:371)
 3. Get base64 images cho image columns (task_instructions.py:375)
 4. Return `[{"text": ..., "image": {...}}]` per row
 
 ## 5. LM Check Pattern
 
-**Tat ca** LLM-based operators kiem tra `lotus.settings.lm is not None`:
+**Tất cả** LLM-based operators kiểm tra `lotus.settings.lm is not None`:
 
 | Operator | Check | File:Line |
 |---|---|---|
@@ -103,7 +103,7 @@
 
 ## 6. RM/VS Check Pattern
 
-**Tat ca** embedding-based operators kiem tra RM va VS:
+**Tất cả** embedding-based operators kiểm tra RM và VS:
 
 | Operator | Check | File:Line |
 |---|---|---|
@@ -113,11 +113,11 @@
 | sem_index | `if rm is None or vs is None: raise ValueError(...)` | sem_index.py:69-72 |
 | sem_cluster_by | `if rm is None or vs is None: raise ValueError(...)` | sem_cluster_by.py:69-72 |
 
-**Luu y**: sem_sim_join dung `isinstance` check (sem_sim_join.py:103), cac operator khac dung `is None` check — inconsistent.
+**Lưu ý**: sem_sim_join dùng `isinstance` check (sem_sim_join.py:103), các operator khác dùng `is None` check — inconsistent.
 
 ## 7. Column Validation Pattern
 
-**Pattern chung**: Loop qua columns va kiem tra ton tai trong DataFrame:
+**Pattern chung**: Loop qua columns và kiểm tra tồn tại trong DataFrame:
 
 ```python
 for column in col_li:
@@ -136,7 +136,7 @@ for column in col_li:
 
 ## 8. `nle2str` Formatting Pattern
 
-**LLM operators** dung `lotus.nl_expression.nle2str()` (nl_expression.py:17-21) de format instruction:
+**LLM operators** dùng `lotus.nl_expression.nle2str()` (nl_expression.py:17-21) để format instruction:
 
 | Operator | nle2str usage | File:Line |
 |---|---|---|
@@ -145,19 +145,19 @@ for column in col_li:
 | sem_agg | `formatted_usr_instr = lotus.nl_expression.nle2str(user_instruction, col_li)` | sem_agg.py:408 |
 | sem_topk | `formatted_usr_instr = lotus.nl_expression.nle2str(user_instruction, col_li)` | sem_topk.py:792 |
 
-**Luu y**: sem_join khong dung nle2str — truyen join_instruction truc tiep vi can giu {col} format cho merge_multimodal_info.
+**Lưu ý**: sem_join không dùng nle2str — truyền join_instruction trực tiếp vì cần giữ {col} format cho merge_multimodal_info.
 
 ## 9. Mutability Pattern
 
-**Cac operators co mutate self._obj**:
+**Các operators có mutate self._obj**:
 - `sem_index`: `self._obj.attrs["index_dirs"][col_name] = index_dir` (sem_index.py:76)
 - `sem_partition_by`: `self._obj["_lotus_partition_id"] = ...` (sem_partition_by.py:66)
 - `sem_cluster_by`: `self._obj["cluster_id"] = ...` (sem_cluster_by.py:78)
 - `sem_agg`: `self._obj = self._obj.sort_values(...)` (sem_agg.py:403)
 
-**Cac operators tra ve new DataFrame** (khong mutate):
-- `sem_filter`: `new_df = self._obj.iloc[ids]` hoac `new_df = self._obj.copy()` (sem_filter.py:563, 576)
+**Các operators trả về new DataFrame** (không mutate):
+- `sem_filter`: `new_df = self._obj.iloc[ids]` hoặc `new_df = self._obj.copy()` (sem_filter.py:563, 576)
 - `sem_map`: `new_df = self._obj.copy()` (sem_map.py:272)
 - `sem_extract`: `new_df = self._obj.copy()` (sem_extract.py:240)
 
-**Inconsistency**: Mot so operators mutate, mot so copy — behavior khong nhat quan.
+**Inconsistency**: Một số operators mutate, một số copy — behavior không nhất quán.

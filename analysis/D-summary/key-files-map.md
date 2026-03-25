@@ -1,27 +1,27 @@
 # Key Files Map — LOTUS
 
-## Huong dan doc code theo chu de
+## Hướng dẫn đọc code theo chủ đề
 
-| Toi muon hieu... | Doc file nay | Bat dau tu dong |
+| Tôi muốn hiểu... | Đọc file này | Bắt đầu từ dòng |
 |-------------------|-------------|-----------------|
-| **Kien truc tong the** | `lotus/__init__.py` | 1 — imports va __all__ cho thay toan bo modules |
-| **Cau hinh he thong** | `lotus/settings.py` | 5 — Settings class voi tat ca cau hinh |
-| **Data representation** | `lotus/dtype_extensions/image.py` | 12 — ImageDtype va ImageArray custom extension |
-| **Cach DataFrame chua metadata** | `lotus/sem_ops/sem_index.py` | 1 — attrs["index_dirs"] pattern |
+| **Kiến trúc tổng thể** | `lotus/__init__.py` | 1 — imports và __all__ cho thấy toàn bộ modules |
+| **Cấu hình hệ thống** | `lotus/settings.py` | 5 — Settings class với tất cả cấu hình |
+| **Data representation** | `lotus/dtype_extensions/image.py` | 12 — ImageDtype và ImageArray custom extension |
+| **Cách DataFrame chứa metadata** | `lotus/sem_ops/sem_index.py` | 1 — attrs["index_dirs"] pattern |
 | **LLM reasoning core** | `lotus/models/lm.py` | 41 — LM class: cache, batch, rate limit |
 | **LLM call pipeline** | `lotus/models/lm.py` | 123 — `__call__` method: cache check → batch → stats |
-| **Accuracy guarantees** | `lotus/sem_ops/cascade_utils.py` | 42 — `learn_cascade_thresholds` voi Hoeffding bounds |
+| **Accuracy guarantees** | `lotus/sem_ops/cascade_utils.py` | 42 — `learn_cascade_thresholds` với Hoeffding bounds |
 | **Statistical bounds** | `lotus/sem_ops/cascade_utils.py` | 52 — UB/LB functions |
-| **Importance sampling** | `lotus/sem_ops/cascade_utils.py` | 8 — Weighted sampling voi correction |
+| **Importance sampling** | `lotus/sem_ops/cascade_utils.py` | 8 — Weighted sampling với correction |
 | **Structured ↔ Unstructured bridge** | `lotus/nl_expression.py` | 4 — parse_cols regex cho Langex |
 | **Prompt construction** | `lotus/templates/task_instructions.py` | 1 — filter_formatter, map_formatter, etc. |
 | **Filter operator** | `lotus/sem_ops/sem_filter.py` | 24 — Core logic: prompt → LM → postprocess |
 | **Filter cascade** | `lotus/sem_ops/sem_filter.py` | 383 — Proxy routing + threshold learning |
 | **Map operator** | `lotus/sem_ops/sem_map.py` | 14 — sem_map function |
-| **Extract operator** | `lotus/sem_ops/sem_extract.py` | 15 — Structured extraction voi JSON output |
+| **Extract operator** | `lotus/sem_ops/sem_extract.py` | 15 — Structured extraction với JSON output |
 | **Aggregation tree** | `lotus/sem_ops/sem_agg.py` | 60 — Hierarchical aggregation logic |
 | **Top-K sorting** | `lotus/sem_ops/sem_topk.py` | 347 — llm_quicksort implementation |
-| **Heapsort** | `lotus/sem_ops/sem_topk.py` | 560 — llm_heapsort voi HeapDoc comparator |
+| **Heapsort** | `lotus/sem_ops/sem_topk.py` | 560 — llm_heapsort với HeapDoc comparator |
 | **TopK cascade** | `lotus/sem_ops/sem_topk.py` | 176 — compare_batch_binary_cascade |
 | **Join core** | `lotus/sem_ops/sem_join.py` | 16 — sem_join: all-pairs filter |
 | **Join cascade** | `lotus/sem_ops/sem_join.py` | 180 — sem_join_cascade orchestration |
@@ -57,21 +57,21 @@
 
 ## Reading Order Recommendations
 
-### Nguoi moi bat dau — "LOTUS lam gi?"
+### Người mới bắt đầu — "LOTUS làm gì?"
 1. `lotus/__init__.py:1` — Overview
 2. `lotus/settings.py:1` — Configuration
 3. `lotus/nl_expression.py:1` — Langex parsing
 4. `lotus/sem_ops/sem_filter.py:225` — Operator pattern example
 5. `lotus/models/lm.py:41` — LM class
 
-### Engineer muon contribute — "LOTUS hoat dong the nao?"
+### Engineer muốn contribute — "LOTUS hoạt động thế nào?"
 1. `lotus/types.py:1` — Type system
 2. `lotus/cache.py:33` — Caching pattern
 3. `lotus/sem_ops/sem_filter.py:24` — Core operator logic
 4. `lotus/models/lm.py:123` — LM call pipeline
 5. `lotus/sem_ops/postprocessors.py:1` — Output parsing
 
-### Researcher quan tam optimization — "LOTUS toi uu the nao?"
+### Researcher quan tâm optimization — "LOTUS tối ưu thế nào?"
 1. `lotus/sem_ops/cascade_utils.py:42` — Threshold learning
 2. `lotus/sem_ops/sem_filter.py:383` — Filter cascade
 3. `lotus/sem_ops/sem_join.py:417` — Join optimizer

@@ -2,7 +2,7 @@
 
 ## Formatter Function
 
-`filter_formatter` tai `task_instructions.py:87`:
+`filter_formatter` tại `task_instructions.py:87`:
 
 ```python
 def filter_formatter(
@@ -28,7 +28,7 @@ The user will provide a claim and some relevant context.
 
 ```
 
-Khi `strategy` KHONG phai COT/ZS_COT, them (task_instructions.py:112):
+Khi `strategy` KHÔNG phải COT/ZS_COT, thêm (task_instructions.py:112):
 ```
 Use the following format to provide your answer:
             Answer: <Your answer here. The answer should be either True or False>
@@ -53,7 +53,7 @@ Answer: <Your answer here. The answer should be either True or False>
 
 Khi `strategy == ReasoningStrategy.ZS_COT and model.is_deepseek()`:
 
-User instruction duoc append:
+User instruction được append:
 ```
 Please think through your reasoning step by step, then provide your final answer.
     You must put your reasoning inside the <think></think> tags, then provide your
@@ -62,7 +62,7 @@ Please think through your reasoning step by step, then provide your final answer
 
 ## User Message Format
 
-Duoc tao boi `user_message_formatter` (task_instructions.py:68):
+Được tạo bởi `user_message_formatter` (task_instructions.py:68):
 
 ```
 Context:
@@ -75,13 +75,13 @@ Format: `"Context:\n{text}\n\nClaim: {user_instruction}"` (task_instructions.py:
 
 ## Few-shot Examples
 
-Khi `examples_multimodal_data` va `examples_answer` duoc cung cap (task_instructions.py:118-151):
+Khi `examples_multimodal_data` và `examples_answer` được cung cấp (task_instructions.py:118-151):
 
-Moi example tao 2 messages:
+Mỗi example tạo 2 messages:
 1. User message: context + claim (task_instructions.py:145)
 2. Assistant message: answer (task_instructions.py:141-146)
 
-### Voi CoT reasoning:
+### Với CoT reasoning:
 ```
 Reasoning:
 {cot_reasoning[idx]}
@@ -89,7 +89,7 @@ Reasoning:
 Answer: {ex_ans}
 ```
 
-### Khong co CoT:
+### Không có CoT:
 ```
 Answer: {ex_ans}
 ```
@@ -99,7 +99,7 @@ Answer: {ex_ans}
 ```python
 messages = [
     {"role": "system", "content": sys_instruction},
-    # Few-shot examples (neu co):
+    # Few-shot examples (nếu có):
     {"role": "user", "content": "Context:\n{example_text}\n\nClaim: {instruction}"},
     {"role": "assistant", "content": "Answer: True"},
     {"role": "user", "content": "Context:\n{example_text}\n\nClaim: {instruction}"},
@@ -111,7 +111,7 @@ messages = [
 
 ## Postprocessing
 
-`filter_postprocess` tai `postprocessors.py:182`:
+`filter_postprocess` tại `postprocessors.py:182`:
 
 ```python
 def filter_postprocess(llm_answers, model, default=True):
@@ -132,16 +132,16 @@ def filter_postprocess(llm_answers, model, default=True):
     return SemanticFilterPostprocessOutput(...)
 ```
 
-1. Goi `cot_postprocessor` de tach reasoning va answer (postprocessors.py:12-43)
-2. Tim "True" hoac "False" trong answer string (postprocessors.py:205-208)
-3. Fallback: `default` parameter (thong thuong `True`)
+1. Gọi `cot_postprocessor` để tách reasoning và answer (postprocessors.py:12-43)
+2. Tìm "True" hoặc "False" trong answer string (postprocessors.py:205-208)
+3. Fallback: `default` parameter (thông thường `True`)
 
-## Phan tich
+## Phân tích
 
-1. **Claim-based framing**: Prompt frame bai toan nhu kiem chung claim (True/False), khong phai classification. Dieu nay giup LLM tra loi nhat quan hon.
+1. **Claim-based framing**: Prompt frame bài toán như kiểm chứng claim (True/False), không phải classification. Điều này giúp LLM trả lời nhất quán hơn.
 
-2. **answer_instructions** buoc LLM ghi ro "True" hoac "False" de de parse.
+2. **answer_instructions** buộc LLM ghi rõ "True" hoặc "False" để dễ parse.
 
-3. **Few-shot**: Examples duoc chen thanh user-assistant turn pairs, theo format cua OpenAI chat API.
+3. **Few-shot**: Examples được chèn thành user-assistant turn pairs, theo format của OpenAI chat API.
 
-4. **Default value**: Neu LLM output khong parse duoc, `default=True` nghia la mac dinh KEEP row (conservative filter). User co the doi thanh `False` de mac dinh REMOVE.
+4. **Default value**: Nếu LLM output không parse được, `default=True` nghĩa là mặc định KEEP row (conservative filter). User có thể đổi thành `False` để mặc định REMOVE.

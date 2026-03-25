@@ -1,100 +1,100 @@
 # Technical Debt — LOTUS
 
-## Cac van de tim thay trong codebase
+## Các vấn đề tìm thấy trong codebase
 
 ---
 
-## 1. Settings khong Thread-Safe
+## 1. Settings không Thread-Safe
 
-**Vi tri:** `settings.py:5`
+**Vị trí:** `settings.py:5`
 
 ```python
 # NOTE: Settings class is not thread-safe
 ```
 
-**Van de:**
-- `Settings` la class-level attributes (khong phai instance) — `settings.py:8-23`
-- `settings = Settings()` la singleton global — `settings.py:35`
-- Khi dung `ThreadPoolExecutor` cho group_by (vi du `sem_agg.py:396-399`, `sem_topk.py:770-773`), nhieu threads doc/ghi cung settings object
-- Neu mot thread thay doi `lotus.settings.lm` trong khi thread khac dang su dung no → race condition
-- `configure` method khong co lock — `settings.py:25-29`
+**Vấn đề:**
+- `Settings` là class-level attributes (không phải instance) — `settings.py:8-23`
+- `settings = Settings()` là singleton global — `settings.py:35`
+- Khi dùng `ThreadPoolExecutor` cho group_by (ví dụ `sem_agg.py:396-399`, `sem_topk.py:770-773`), nhiều threads đọc/ghi cùng settings object
+- Nếu một thread thay đổi `lotus.settings.lm` trong khi thread khác đang sử dụng nó → race condition
+- `configure` method không có lock — `settings.py:25-29`
 
-**Muc do:** TRUNG BINH — hien tai cac threads chi doc settings, chua co case ghi dong thoi.
+**Mức độ:** TRUNG BÌNH — hiện tại các threads chỉ đọc settings, chưa có case ghi đồng thời.
 
 ---
 
-## 2. sem_dedup Tao Redundant Self-Join
+## 2. sem_dedup Tạo Redundant Self-Join
 
-**Vi tri:** `sem_dedup.py:45`
+**Vị trí:** `sem_dedup.py:45`
 
 ```python
 joined_df = self._obj.sem_sim_join(self._obj, col_name, col_name, len(self._obj), lsuffix="_l", rsuffix="_r")
 ```
 
-**Van de:**
-- Join DataFrame voi chinh no: O(n^2) pairs
-- Moi item duoc so sanh voi tat ca items khac, bao gom chinh no
-- Phai filter ra self-matches sau — `sem_dedup.py:47`
-- Voi n=1000 items, tao 1,000,000 pairs — rat cham va ton bo nho
-- Cach tot hon: dung clustering hoac LSH de tim candidates truoc
+**Vấn đề:**
+- Join DataFrame với chính nó: O(n^2) pairs
+- Mỗi item được so sánh với tất cả items khác, bao gồm chính nó
+- Phải filter ra self-matches sau — `sem_dedup.py:47`
+- Với n=1000 items, tạo 1,000,000 pairs — rất chậm và tốn bộ nhớ
+- Cách tốt hơn: dùng clustering hoặc LSH để tìm candidates trước
 
-**Muc do:** CAO — khong scale duoc voi dataset lon.
-
----
-
-## 3. Khong co Streaming Support cho Large Datasets
-
-**Van de:**
-- Tat ca operators load toan bo data vao memory truoc khi xu ly
-- `df2multimodal_info` chuyen TOAN BO DataFrame thanh list of dicts — vi du `sem_filter.py:367`
-- Voi DataFrame co 100K rows va nhieu images, bo nho se bi day
-- Khong co lazy evaluation hay pagination
-- Khong co co che xu ly tung batch cua input data
-
-**Muc do:** TRUNG BINH — phu thuoc vao kich thuoc dataset.
+**Mức độ:** CAO — không scale được với dataset lớn.
 
 ---
 
-## 4. ColBERTv2RM get_vectors_from_index Khong Implement
+## 3. Không có Streaming Support cho Large Datasets
 
-**Vi tri:** `colbertv2_rm.py:95-109`
+**Vấn đề:**
+- Tất cả operators load toàn bộ data vào memory trước khi xử lý
+- `df2multimodal_info` chuyển TOÀN BỘ DataFrame thành list of dicts — ví dụ `sem_filter.py:367`
+- Với DataFrame có 100K rows và nhiều images, bộ nhớ sẽ bị đầy
+- Không có lazy evaluation hay pagination
+- Không có cơ chế xử lý từng batch của input data
+
+**Mức độ:** TRUNG BÌNH — phụ thuộc vào kích thước dataset.
+
+---
+
+## 4. ColBERTv2RM get_vectors_from_index Không Implement
+
+**Vị trí:** `colbertv2_rm.py:95-109`
 
 ```python
 def get_vectors_from_index(self, index_dir, ids):
     raise NotImplementedError("This method is not implemented for ColBERTv2RM")
 ```
 
-**Van de:**
-- `sem_sim_join.py:114-117` co try/except de handle:
+**Vấn đề:**
+- `sem_sim_join.py:114-117` có try/except để handle:
   ```python
   try:
       queries = vs.get_vectors_from_index(query_index_dir, self._obj.index)
   except NotImplementedError:
       queries = self._obj[left_on]
   ```
-- Khi fallback, queries la text thay vi pre-computed vectors → cham hon vi phai re-embed
-- ColBERTv2 dung multi-vector representation nen khong the export single vector per doc
+- Khi fallback, queries là text thay vì pre-computed vectors → chậm hơn vì phải re-embed
+- ColBERTv2 dùng multi-vector representation nên không thể export single vector per doc
 
-**Muc do:** THAP — co fallback hoat dong, chi cham hon.
-
----
-
-## 5. Khong co Incremental Indexing
-
-**Van de:**
-- `sem_index` tao index moi tu dau moi lan — khong co `add_documents` method
-- Khi them data moi vao DataFrame, phai re-index toan bo
-- Vector stores (Faiss, Qdrant, Weaviate) ho tro incremental add, nhung LOTUS khong expose
-- Khong co co che update/delete individual vectors
-
-**Muc do:** TRUNG BINH — anh huong den workflow iterative.
+**Mức độ:** THẤP — có fallback hoạt động, chỉ chậm hơn.
 
 ---
 
-## 6. safe_mode Khong Day Du
+## 5. Không có Incremental Indexing
 
-**Van de:**
-Mot so operators chua implement safe_mode:
+**Vấn đề:**
+- `sem_index` tạo index mới từ đầu mỗi lần — không có `add_documents` method
+- Khi thêm data mới vào DataFrame, phải re-index toàn bộ
+- Vector stores (Faiss, Qdrant, Weaviate) hỗ trợ incremental add, nhưng LOTUS không expose
+- Không có cơ chế update/delete individual vectors
+
+**Mức độ:** TRUNG BÌNH — ảnh hưởng đến workflow iterative.
+
+---
+
+## 6. safe_mode Không Đầy Đủ
+
+**Vấn đề:**
+Một số operators chưa implement safe_mode:
 
 - `sem_agg.py:152-153`:
   ```python
@@ -108,47 +108,47 @@ Mot so operators chua implement safe_mode:
       lotus.logger.warning("Safe mode is not implemented yet.")
   ```
 
-- `sem_dedup`, `sem_cluster_by`, `sem_partition_by`: khong co parameter safe_mode
+- `sem_dedup`, `sem_cluster_by`, `sem_partition_by`: không có parameter safe_mode
 
-**Muc do:** THAP — safe_mode la optional feature.
+**Mức độ:** THẤP — safe_mode là optional feature.
 
 ---
 
-## 7. Tat ca Extract Values Bi Cast thanh str
+## 7. Tất cả Extract Values Bị Cast thành str
 
-**Vi tri:** `postprocessors.py:176-177`
+**Vị trí:** `postprocessors.py:176-177`
 
 ```python
 output = {key: str(value) for key, value in output.items()}
 ```
 
-Tuong tu tai `postprocessors.py:38`:
+Tương tự tại `postprocessors.py:38`:
 ```python
 json_obj = {key: str(value) for key, value in json_obj.items()}
 ```
 
-Va tai `postprocessors.py:88`:
+Và tại `postprocessors.py:88`:
 ```python
 json_obj = {key: str(value) for key, value in json_obj.items()}
 ```
 
-**Van de:**
-- LLM tra ve JSON voi numbers, booleans, lists — tat ca deu bi convert thanh string
-- `{"rating": 5, "is_positive": true}` tro thanh `{"rating": "5", "is_positive": "True"}`
-- User phai tu cast lai types sau khi extract
-- Mat thong tin type information tu LLM output
+**Vấn đề:**
+- LLM trả về JSON với numbers, booleans, lists — tất cả đều bị convert thành string
+- `{"rating": 5, "is_positive": true}` trở thành `{"rating": "5", "is_positive": "True"}`
+- User phải tự cast lại types sau khi extract
+- Mất thông tin type information từ LLM output
 
-**Muc do:** TRUNG BINH — de fix nhung anh huong den usability.
+**Mức độ:** TRUNG BÌNH — dễ fix nhưng ảnh hưởng đến usability.
 
 ---
 
-## 8. InMemoryCache Khong Phai LRU Thuc Su
+## 8. InMemoryCache Không Phải LRU Thực Sự
 
-**Vi tri:** `cache.py:247-268`
+**Vị trí:** `cache.py:247-268`
 
 ```python
 def get(self, key):
-    return self.cache.get(key)  # Khong move_to_end!
+    return self.cache.get(key)  # Không move_to_end!
 
 def insert(self, key, value):
     self.cache[key] = value
@@ -156,19 +156,19 @@ def insert(self, key, value):
         self.cache.popitem(last=False)  # Evict oldest by insertion order
 ```
 
-**Van de:**
-- `get()` tai `cache.py:252-256` khong goi `self.cache.move_to_end(key)`
-- Items duoc evict theo **insertion order**, khong phai **access order**
-- Day la FIFO, khong phai LRU
-- Items duoc access nhieu van co the bi evict som
+**Vấn đề:**
+- `get()` tại `cache.py:252-256` không gọi `self.cache.move_to_end(key)`
+- Items được evict theo **insertion order**, không phải **access order**
+- Đây là FIFO, không phải LRU
+- Items được access nhiều vẫn có thể bị evict sớm
 
-**Muc do:** THAP — cache van hoat dong, chi khong optimal.
+**Mức độ:** THẤP — cache vẫn hoạt động, chỉ không optimal.
 
 ---
 
-## 9. HeapDoc Dung Class Variables cho State
+## 9. HeapDoc Dùng Class Variables cho State
 
-**Vi tri:** `sem_topk.py:507-511`
+**Vị trí:** `sem_topk.py:507-511`
 
 ```python
 class HeapDoc:
@@ -179,19 +179,19 @@ class HeapDoc:
     explanations: dict[int, list[str]] = {}
 ```
 
-**Van de:**
-- Class variables duoc chia se giua TAT CA instances
-- Phai reset manual truoc moi lan dung — `sem_topk.py:605-609`
-- Khong thread-safe — neu hai sem_topk chay song song (group_by), se ghi de len nhau
-- Mutable default `explanations = {}` duoc chia se giua tat ca invocations
+**Vấn đề:**
+- Class variables được chia sẻ giữa TẤT CẢ instances
+- Phải reset manual trước mỗi lần dùng — `sem_topk.py:605-609`
+- Không thread-safe — nếu hai sem_topk chạy song song (group_by), sẽ ghi đè lên nhau
+- Mutable default `explanations = {}` được chia sẻ giữa tất cả invocations
 
-**Muc do:** TRUNG BINH — co the gay loi kho debug trong parallel execution.
+**Mức độ:** TRUNG BÌNH — có thể gây lỗi khó debug trong parallel execution.
 
 ---
 
 ## 10. Error Handling trong Cascade Fallback
 
-**Vi tri:** `sem_join.py:598-601`
+**Vị trí:** `sem_join.py:598-601`
 
 ```python
 except Exception as e:
@@ -200,27 +200,27 @@ except Exception as e:
     return 1.0, 0.0, len(sample_indices)
 ```
 
-**Van de:**
-- Catch `Exception` qua rong — bat ca programming errors
-- Fallback ve full join (thresholds 1.0, 0.0) co the rat dat
-- User khong duoc canh bao ve chi phi tang dot ngot
-- Tuong tu tai `sem_filter.py:220-222` — raise lai exception nhung da mat context
+**Vấn đề:**
+- Catch `Exception` quá rộng — bắt cả programming errors
+- Fallback về full join (thresholds 1.0, 0.0) có thể rất đắt
+- User không được cảnh báo về chi phí tăng đột ngột
+- Tương tự tại `sem_filter.py:220-222` — raise lại exception nhưng đã mất context
 
-**Muc do:** THAP — failsafe behavior hop ly, chi can log tot hon.
+**Mức độ:** THẤP — failsafe behavior hợp lý, chỉ cần log tốt hơn.
 
 ---
 
-## Tom tat theo Muc do
+## Tóm tắt theo Mức độ
 
-| Muc do | Van de | File chinh |
+| Mức độ | Vấn đề | File chính |
 |--------|--------|-----------|
 | CAO | sem_dedup self-join O(n^2) | sem_dedup.py:45 |
-| TRUNG BINH | Settings khong thread-safe | settings.py:5 |
-| TRUNG BINH | Khong co streaming | Toan bo codebase |
-| TRUNG BINH | Khong co incremental indexing | sem_index.py |
-| TRUNG BINH | Extract values cast str | postprocessors.py:176 |
-| TRUNG BINH | HeapDoc class variables | sem_topk.py:507-511 |
-| THAP | ColBERTv2 get_vectors | colbertv2_rm.py:109 |
-| THAP | safe_mode khong day du | sem_agg.py:152, sem_join.py:262 |
-| THAP | InMemoryCache khong LRU thuc su | cache.py:252 |
-| THAP | Cascade error handling rong | sem_join.py:598 |
+| TRUNG BÌNH | Settings không thread-safe | settings.py:5 |
+| TRUNG BÌNH | Không có streaming | Toàn bộ codebase |
+| TRUNG BÌNH | Không có incremental indexing | sem_index.py |
+| TRUNG BÌNH | Extract values cast str | postprocessors.py:176 |
+| TRUNG BÌNH | HeapDoc class variables | sem_topk.py:507-511 |
+| THẤP | ColBERTv2 get_vectors | colbertv2_rm.py:109 |
+| THẤP | safe_mode không đầy đủ | sem_agg.py:152, sem_join.py:262 |
+| THẤP | InMemoryCache không LRU thực sự | cache.py:252 |
+| THẤP | Cascade error handling rộng | sem_join.py:598 |

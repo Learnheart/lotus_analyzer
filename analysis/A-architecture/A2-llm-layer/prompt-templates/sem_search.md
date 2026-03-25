@@ -1,8 +1,8 @@
 # Prompt Template: sem_search
 
-## Khong co LLM Prompt
+## Không có LLM Prompt
 
-`sem_search` la purely vector-based retrieval operator. No KHONG su dung LLM va KHONG co prompt template.
+`sem_search` là purely vector-based retrieval operator. Nó KHÔNG sử dụng LLM và KHÔNG có prompt template.
 
 ## Flow
 
@@ -11,15 +11,15 @@ sem_search(col_name, query, K)
     |
     |-- rm.convert_query_to_query_vector(query)   # Embedding model
     |-- vs(query_vectors, K)                       # Vector store search
-    |-- Post-filter by df_idxs                     # Loc theo DataFrame index
+    |-- Post-filter by df_idxs                     # Lọc theo DataFrame index
     |-- [Optional] reranker(query, docs, n_rerank) # Cross-encoder reranking
 ```
 
-Xem chi tiet tai `/analysis/A-architecture/A3-embedding-layer/search-flow-trace.md`.
+Xem chi tiết tại `/analysis/A-architecture/A3-embedding-layer/search-flow-trace.md`.
 
 ## Optional Reranking
 
-Khi `n_rerank` duoc chi dinh (sem_search.py:148-155), su dung `lotus.settings.reranker`:
+Khi `n_rerank` được chỉ định (sem_search.py:148-155), sử dụng `lotus.settings.reranker`:
 
 ```python
 if n_rerank is not None:
@@ -31,9 +31,9 @@ if n_rerank is not None:
     new_df = new_df.iloc[reranked_idxs]
 ```
 
-Reranker (vi du CrossEncoderReranker tai `models/cross_encoder_reranker.py`) co the dung cross-encoder model de re-score documents, nhung van khong phai LLM prompt.
+Reranker (ví dụ CrossEncoderReranker tại `models/cross_encoder_reranker.py`) có thể dùng cross-encoder model để re-score documents, nhưng vẫn không phải LLM prompt.
 
-## So sanh voi cac operators khac
+## So sánh với các operators khác
 
 | Aspect | sem_search | sem_filter | sem_topk |
 |---|---|---|---|

@@ -1,12 +1,12 @@
 # A2 - Caching
 
-## Hai cap do caching trong LOTUS
+## Hai cấp độ caching trong LOTUS
 
-LOTUS co 2 lop cache doc lap:
-1. **LM-level cache**: Cache tung LLM response theo hash(model + messages + kwargs)
-2. **Operator-level cache**: Cache toan bo ket qua cua operator theo hash(DataFrame + arguments)
+LOTUS có 2 lớp cache độc lập:
+1. **LM-level cache**: Cache từng LLM response theo hash(model + messages + kwargs)
+2. **Operator-level cache**: Cache toàn bộ kết quả của operator theo hash(DataFrame + arguments)
 
-Ca hai chi hoat dong khi `lotus.settings.enable_cache = True` (default `False`, settings.py:17).
+Cả hai chỉ hoạt động khi `lotus.settings.enable_cache = True` (default `False`, settings.py:17).
 
 ---
 
@@ -20,7 +20,7 @@ def _hash_messages(self, messages: list[dict[str, str]], kwargs: dict[str, Any])
     return hashlib.sha256(to_hash.encode()).hexdigest()
 ```
 
-Hash bao gom: model name + full messages + all kwargs -> SHA256.
+Hash bao gồm: model name + full messages + all kwargs -> SHA256.
 
 ### Cache check flow trong __call__ (lm.py:136-158)
 
@@ -28,14 +28,14 @@ Hash bao gom: model name + full messages + all kwargs -> SHA256.
 if lotus.settings.enable_cache:
     hashed_messages = [self._hash_messages(msg, all_kwargs) for msg in messages]
     cached_responses_raw = [self.cache.get(hash) for hash in hashed_messages]
-    # Filter None va non-ModelResponse
+    # Filter None và non-ModelResponse
     ...
 ```
 
-1. Hash moi message
-2. Kiem tra cache cho tung hash
-3. Chi chap nhan `ModelResponse` instances (lm.py:145-146)
-4. Tach thanh cached va uncached lists
+1. Hash mỗi message
+2. Kiểm tra cache cho từng hash
+3. Chỉ chấp nhận `ModelResponse` instances (lm.py:145-146)
+4. Tách thành cached và uncached lists
 
 ### Cache insert (lm.py:392-405)
 
@@ -46,8 +46,8 @@ def _cache_response(self, response: ModelResponse, hash: str) -> None:
     self.cache.insert(hash, response)
 ```
 
-- Khong cache error responses
-- Cache sau khi nhan response thanh cong
+- Không cache error responses
+- Cache sau khi nhận response thành công
 
 ### Stats tracking (lm.py:160, 174-177)
 
@@ -61,9 +61,9 @@ if lotus.settings.enable_cache:
             self._update_stats(resp, is_cached=True)
 ```
 
-- `cache_hits` dem so responses lay tu cache
-- Virtual usage van duoc cap nhat cho cached responses (de theo doi tong usage "that")
-- Physical usage chi cap nhat cho uncached responses (lm.py:481)
+- `cache_hits` đếm số responses lấy từ cache
+- Virtual usage vẫn được cập nhật cho cached responses (để theo dõi tổng usage "thật")
+- Physical usage chỉ cập nhật cho uncached responses (lm.py:481)
 
 ---
 
@@ -93,14 +93,14 @@ def operator_cache(func: Callable) -> Callable:
 
 ### Serialization logic (cache.py:43-67)
 
-`serialize()` function xu ly nhieu kieu du lieu:
-- `None`, `str`, `int`, `float`, `bool`: giu nguyen
+`serialize()` function xử lý nhiều kiểu dữ liệu:
+- `None`, `str`, `int`, `float`, `bool`: giữ nguyên
 - `pd.DataFrame`: `df.to_json(orient="split")`
-- `BaseModel`: `model_dump()` roi serialize tiep
-- `list`/`tuple`: serialize tung element
-- `dict`: serialize tung value
-- Object co `__dict__`: serialize attributes (bo qua `_` prefix)
-- Fallback: `str(value)` voi warning
+- `BaseModel`: `model_dump()` rồi serialize tiếp
+- `list`/`tuple`: serialize từng element
+- `dict`: serialize từng value
+- Object có `__dict__`: serialize attributes (bỏ qua `_` prefix)
+- Fallback: `str(value)` với warning
 
 ### Virtual usage tracking (cache.py:91-94)
 
@@ -111,14 +111,14 @@ virtual_usage = lotus.settings.lm.stats.virtual_usage - virtual_usage_before
 model.cache.insert(virtual_usage_cache_key, virtual_usage)
 ```
 
-Khi operator cache hit, virtual usage duoc restore (cache.py:84-86):
+Khi operator cache hit, virtual usage được restore (cache.py:84-86):
 ```python
 cached_virtual_usage = model.cache.get(virtual_usage_cache_key)
 if cached_virtual_usage is not None:
     model.stats.virtual_usage += cached_virtual_usage
 ```
 
-Dieu nay dam bao `virtual_usage` phan anh dung tong usage ngay ca khi operator duoc cache.
+Điều này đảm bảo `virtual_usage` phản ánh đúng tổng usage ngay cả khi operator được cache.
 
 ---
 
@@ -133,8 +133,8 @@ class InMemoryCache(Cache):
         self.cache: OrderedDict[str, Any] = OrderedDict()
 ```
 
-- Su dung `OrderedDict` (cache.py:250)
-- LRU eviction: khi vuot `max_size`, xoa entry cu nhat (cache.py:262-263):
+- Sử dụng `OrderedDict` (cache.py:250)
+- LRU eviction: khi vượt `max_size`, xóa entry cũ nhất (cache.py:262-263):
   ```python
   if len(self.cache) > self.max_size:
       self.cache.popitem(last=False)
@@ -149,10 +149,10 @@ class SQLiteCache(Cache):
         self.db_path = os.path.join(cache_dir, "lotus_cache.db")
 ```
 
-- Persist tren disk tai `~/.lotus/cache/lotus_cache.db`
-- Su dung `pickle.dumps/loads` de serialize values (cache.py:200, 213)
-- Thread-safe qua `ThreadLocalConnection` (cache.py:150-165): moi thread co connection rieng
-- LRU eviction dua tren `last_accessed` timestamp (cache.py:224-238)
+- Persist trên disk tại `~/.lotus/cache/lotus_cache.db`
+- Sử dụng `pickle.dumps/loads` để serialize values (cache.py:200, 213)
+- Thread-safe qua `ThreadLocalConnection` (cache.py:150-165): mỗi thread có connection riêng
+- LRU eviction dựa trên `last_accessed` timestamp (cache.py:224-238)
 - Schema: `CREATE TABLE cache (key TEXT PRIMARY KEY, value BLOB, last_accessed INTEGER)` (cache.py:183-188)
 
 ### CacheFactory (cache.py:132)
@@ -177,12 +177,12 @@ class CacheType(Enum):
 
 ---
 
-## Luu y quan trong
+## Lưu ý quan trọng
 
-1. **Cache default OFF**: `enable_cache = False` (settings.py:17). User phai bat `lotus.settings.configure(enable_cache=True)`.
+1. **Cache default OFF**: `enable_cache = False` (settings.py:17). User phải bật `lotus.settings.configure(enable_cache=True)`.
 
-2. **LM luon co cache instance**: `self.cache = cache or CacheFactory.create_default_cache()` (lm.py:121). Cache instance ton tai ngay ca khi `enable_cache=False`, nhung khong duoc su dung.
+2. **LM luôn có cache instance**: `self.cache = cache or CacheFactory.create_default_cache()` (lm.py:121). Cache instance tồn tại ngay cả khi `enable_cache=False`, nhưng không được sử dụng.
 
-3. **llm_as_judge disable cache**: `lotus.settings.enable_cache = False` truoc khi chay, `= True` sau khi chay (llm_as_judge.py:82, 104). Day la side effect nguy hiem voi concurrent code.
+3. **llm_as_judge disable cache**: `lotus.settings.enable_cache = False` trước khi chạy, `= True` sau khi chạy (llm_as_judge.py:82, 104). Đây là side effect nguy hiểm với concurrent code.
 
-4. **operator_cache su dung LM cache instance**: Operator cache key va values duoc luu trong `model.cache` (cache.py:79, 95), cung instance voi LM-level cache. Dieu nay co nghia LM responses va operator results chia se cung cache space va max_size.
+4. **operator_cache sử dụng LM cache instance**: Operator cache key và values được lưu trong `model.cache` (cache.py:79, 95), cùng instance với LM-level cache. Điều này có nghĩa LM responses và operator results chia sẻ cùng cache space và max_size.

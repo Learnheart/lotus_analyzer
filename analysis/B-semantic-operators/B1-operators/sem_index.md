@@ -5,11 +5,11 @@
 - **Accessor line**: 9 (`@pd.api.extensions.register_dataframe_accessor("sem_index")`)
 - **Type**: Unary (side-effect)
 - **Requires**: `lotus.settings.rm` + `lotus.settings.vs` (sem_index.py:67-72)
-- **LLM**: Khong dung LLM
+- **LLM**: Không dùng LLM
 
 ## 1. Purpose & Use Cases
 
-Tao vector similarity index cho 1 column trong DataFrame. Day la prerequisite cho sem_search, sem_sim_join, sem_dedup, sem_cluster_by, va cascade modes cua sem_filter/sem_join.
+Tạo vector similarity index cho 1 column trong DataFrame. Đây là prerequisite cho sem_search, sem_sim_join, sem_dedup, sem_cluster_by, và cascade modes của sem_filter/sem_join.
 
 **Use cases:**
 - Index for search: `df.sem_index("title", "title_index")`
@@ -20,9 +20,9 @@ Tao vector similarity index cho 1 column trong DataFrame. Day la prerequisite ch
 
 ```
 1. SemIndexDataframe.__call__()                         # sem_index.py:62
-2.   Warning: khong reset DataFrame index               # sem_index.py:63-65
+2.   Warning: không reset DataFrame index               # sem_index.py:63-65
 3.   rm = lotus.settings.rm, vs = lotus.settings.vs     # sem_index.py:67-68
-4.   Validate rm va vs                                   # sem_index.py:69-72
+4.   Validate rm và vs                                   # sem_index.py:69-72
 5.   embeddings = rm(df[col_name].tolist())              # sem_index.py:74
 6.   vs.index(df[col_name], embeddings, index_dir)       # sem_index.py:75
 7.   df.attrs["index_dirs"][col_name] = index_dir        # sem_index.py:76
@@ -31,43 +31,43 @@ Tao vector similarity index cho 1 column trong DataFrame. Day la prerequisite ch
 
 ## 3. Prompt Template (COPY VERBATIM)
 
-Khong co prompt — sem_index khong dung LLM.
+Không có prompt — sem_index không dùng LLM.
 
 ## 4. LLM Interaction
 
-**Khong co LLM interaction.** Chi dung:
-- **RM**: `rm(df[col_name].tolist())` (sem_index.py:74) — compute embeddings cho tat ca values
-- **VS**: `vs.index(df[col_name], embeddings, index_dir)` (sem_index.py:75) — xay index va luu vao `index_dir`
+**Không có LLM interaction.** Chỉ dùng:
+- **RM**: `rm(df[col_name].tolist())` (sem_index.py:74) — compute embeddings cho tất cả values
+- **VS**: `vs.index(df[col_name], embeddings, index_dir)` (sem_index.py:75) — xây index và lưu vào `index_dir`
 
 ## 5. Optimization
 
-| Feature | Status | Chi tiet |
+| Feature | Status | Chi tiết |
 |---|---|---|
-| Batching | Yes | RM tinh embeddings batch (sem_index.py:74) |
+| Batching | Yes | RM tính embeddings batch (sem_index.py:74) |
 | Caching | Yes | `@operator_cache` (sem_index.py:61) |
-| Persistence | Yes | Index duoc luu vao disk tai index_dir (sem_index.py:75) |
+| Persistence | Yes | Index được lưu vào disk tại index_dir (sem_index.py:75) |
 
 ## 6. Input/Output Contract
 
 ### Input:
-- `col_name: str` — Column de index (sem_index.py:62)
-- `index_dir: str` — Thu muc luu index (sem_index.py:62)
+- `col_name: str` — Column để index (sem_index.py:62)
+- `index_dir: str` — Thư mục lưu index (sem_index.py:62)
 
 ### Output:
-- DataFrame giong het input (sem_index.py:77)
+- DataFrame giống hệt input (sem_index.py:77)
 - **Side effect**: `df.attrs["index_dirs"][col_name] = index_dir` (sem_index.py:76)
-- **Side effect**: Index file duoc tao tai `index_dir` tren disk
+- **Side effect**: Index file được tạo tại `index_dir` trên disk
 
 ### Init side effect:
-Constructor `__init__` tao `self._obj.attrs["index_dirs"] = {}` (sem_index.py:54) — **chu y**: co the xoa index_dirs cua DataFrame khac!
+Constructor `__init__` tạo `self._obj.attrs["index_dirs"] = {}` (sem_index.py:54) — **chú ý**: có thể xóa index_dirs của DataFrame khác!
 
 ## 7. Edge Cases
 
-1. **RM/VS chua configure**: Raise `ValueError` (sem_index.py:69-72)
-2. **DataFrame index da bi reset**: Warning message (sem_index.py:63-65) — `get_vectors_from_index` co the fail
-3. **Column khong ton tai**: KeyError tu `df[col_name]` (sem_index.py:74)
-4. **Index_dir da ton tai**: Behavior phu thuoc vao VS implementation — co the overwrite
-5. **Init overwrite**: `__init__` set `attrs["index_dirs"] = {}` (sem_index.py:54) — moi lan access `.sem_index` se reset dict!
+1. **RM/VS chưa configure**: Raise `ValueError` (sem_index.py:69-72)
+2. **DataFrame index đã bị reset**: Warning message (sem_index.py:63-65) — `get_vectors_from_index` có thể fail
+3. **Column không tồn tại**: KeyError từ `df[col_name]` (sem_index.py:74)
+4. **Index_dir đã tồn tại**: Behavior phụ thuộc vào VS implementation — có thể overwrite
+5. **Init overwrite**: `__init__` set `attrs["index_dirs"] = {}` (sem_index.py:54) — mỗi lần access `.sem_index` sẽ reset dict!
 
 ## 8. Code Examples
 
@@ -75,24 +75,24 @@ Constructor `__init__` tao `self._obj.attrs["index_dirs"] = {}` (sem_index.py:54
 # Create index
 df = df.sem_index("title", "title_index")
 
-# Sau do co the dung:
+# Sau đó có thể dùng:
 df.sem_search("title", "AI", K=5)
 df.sem_sim_join(other_df, "title", "category", K=1)
 df.sem_cluster_by("title", ncentroids=3)
 
-# Load index tu disk
+# Load index từ disk
 df.load_sem_index("title", "title_index")
 ```
 
 ## 9. Assessment
 
-### Diem manh:
-- **Persistence**: Index luu disk, chi can tao 1 lan
-- **Simple API**: Chi can col_name va index_dir
-- **Foundation operator**: Can thiet cho nhieu operators khac
+### Điểm mạnh:
+- **Persistence**: Index lưu disk, chỉ cần tạo 1 lần
+- **Simple API**: Chỉ cần col_name và index_dir
+- **Foundation operator**: Cần thiết cho nhiều operators khác
 
-### Diem yeu:
-- **Init bug potential**: `__init__` set `attrs["index_dirs"] = {}` (sem_index.py:54) — neu DataFrame da co index_dirs, se bi mat khi access `.sem_index`
-- **No incremental update**: Phai rebuild toan bo index khi data thay doi
-- **No validation**: Khong kiem tra col_name co ton tai khong truoc khi compute embeddings
-- **Warning only**: "Do not reset the dataframe index" chi la warning (sem_index.py:63-65) — khong enforce
+### Điểm yếu:
+- **Init bug potential**: `__init__` set `attrs["index_dirs"] = {}` (sem_index.py:54) — nếu DataFrame đã có index_dirs, sẽ bị mất khi access `.sem_index`
+- **No incremental update**: Phải rebuild toàn bộ index khi data thay đổi
+- **No validation**: Không kiểm tra col_name có tồn tại không trước khi compute embeddings
+- **Warning only**: "Do not reset the dataframe index" chỉ là warning (sem_index.py:63-65) — không enforce

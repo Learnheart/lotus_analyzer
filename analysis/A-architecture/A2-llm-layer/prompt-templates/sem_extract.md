@@ -2,7 +2,7 @@
 
 ## Formatter Function
 
-`extract_formatter` tai `task_instructions.py:257`:
+`extract_formatter` tại `task_instructions.py:257`:
 
 ```python
 def extract_formatter(
@@ -16,7 +16,7 @@ def extract_formatter(
 
 ## Verbatim System Prompt
 
-### Voi quotes (extract_quotes=True) - task_instructions.py:293-299
+### Với quotes (extract_quotes=True) - task_instructions.py:293-299
 
 ```python
 sys_instruction = (
@@ -28,7 +28,7 @@ sys_instruction = (
 )
 ```
 
-Vi du voi `output_cols={"sentiment": "positive/negative", "topic": None}`:
+Ví dụ với `output_cols={"sentiment": "positive/negative", "topic": None}`:
 
 ```
 The user will provide the columns that need to be extracted and some relevant context.
@@ -37,7 +37,7 @@ Here is a description of each field: {'sentiment': 'positive/negative', 'topic':
 The response should be valid JSON format with the following fields: sentiment, topic, sentiment_quote, topic_quote.
 ```
 
-### Khong co quotes (extract_quotes=False) - task_instructions.py:301-306
+### Không có quotes (extract_quotes=False) - task_instructions.py:301-306
 
 ```python
 sys_instruction = (
@@ -48,9 +48,9 @@ sys_instruction = (
 )
 ```
 
-### Voi CoT (strategy=COT hoac ZS_COT) - task_instructions.py:277-290
+### Với CoT (strategy=COT hoặc ZS_COT) - task_instructions.py:277-290
 
-Them CoT instructions vao system prompt (task_instructions.py:309-310):
+Thêm CoT instructions vào system prompt (task_instructions.py:309-310):
 ```python
 if cot_instruction:
     sys_instruction += "\n" + cot_instruction
@@ -73,14 +73,14 @@ Answer: <Your answer here. Provide the JSON response with fields: sentiment, top
 output_cols_with_desc = {col: col if desc is None else desc for col, desc in output_cols.items()}
 ```
 
-Neu description la `None`, dung column name lam description.
+Nếu description là `None`, dùng column name làm description.
 
 ### Quote fields (task_instructions.py:271):
 ```python
 quote_fields = [f"{col}_quote" for col in output_col_names]
 ```
 
-Moi output column co them 1 `_quote` field tuong ung.
+Mỗi output column có thêm 1 `_quote` field tương ứng.
 
 ## Message Structure
 
@@ -91,19 +91,19 @@ messages = [
 ]
 ```
 
-Luu y: `user_message_formatter` duoc goi KHONG co `user_instruction_with_tag` (task_instructions.py:314). Chi co context, khong co "Instruction:" prefix.
+Lưu ý: `user_message_formatter` được gọi KHÔNG có `user_instruction_with_tag` (task_instructions.py:314). Chỉ có context, không có "Instruction:" prefix.
 
 ### DeepSeek ZS_COT (task_instructions.py:317-319):
-Them them 1 user message voi deepseek instructions.
+Thêm thêm 1 user message với deepseek instructions.
 
 ## JSON Response Format
 
-Khi khong dung CoT, `sem_extract` yeu cau JSON response (sem_extract.py:92):
+Khi không dùng CoT, `sem_extract` yêu cầu JSON response (sem_extract.py:92):
 ```python
 lm_output = model(inputs, response_format={"type": "json_object"}, ...)
 ```
 
-Khi dung CoT, khong su dung `response_format` de cho phep reasoning text (sem_extract.py:89-90):
+Khi dùng CoT, không sử dụng `response_format` để cho phép reasoning text (sem_extract.py:89-90):
 ```python
 if strategy in [ReasoningStrategy.COT, ReasoningStrategy.ZS_COT]:
     lm_output = model(inputs, progress_bar_desc=progress_bar_desc)
@@ -111,7 +111,7 @@ if strategy in [ReasoningStrategy.COT, ReasoningStrategy.ZS_COT]:
 
 ## Postprocessing
 
-`extract_postprocess` tai `postprocessors.py:149`:
+`extract_postprocess` tại `postprocessors.py:149`:
 
 ```python
 def extract_postprocess(llm_answers, model, cot_reasoning=False):
@@ -129,11 +129,11 @@ def extract_postprocess(llm_answers, model, cot_reasoning=False):
             extract_data.append(output)
 ```
 
-1. Parse JSON tu LLM output
-2. Convert tat ca values sang string: `{key: str(value) for key, value in output.items()}` (postprocessors.py:176)
-3. Fallback: empty dict `{}` khi JSON parse that bai
+1. Parse JSON từ LLM output
+2. Convert tất cả values sang string: `{key: str(value) for key, value in output.items()}` (postprocessors.py:176)
+3. Fallback: empty dict `{}` khi JSON parse thất bại
 
-## Vi du output
+## Ví dụ output
 
 Input: `{"text": "Great product! 5 stars. Fast shipping."}`
 Output cols: `{"sentiment": "positive/negative", "rating": "1-5 scale"}`
@@ -143,12 +143,12 @@ Expected LLM response:
 {"sentiment": "positive", "rating": "5", "sentiment_quote": "Great product! 5 stars.", "rating_quote": "5 stars"}
 ```
 
-## Phan tich
+## Phân tích
 
-1. **Structured output**: `sem_extract` la operator duy nhat yeu cau JSON output format (qua `response_format={"type": "json_object"}`).
+1. **Structured output**: `sem_extract` là operator duy nhất yêu cầu JSON output format (qua `response_format={"type": "json_object"}`).
 
-2. **Quote extraction**: Tinh nang doc dao - trich xuat ca gia tri va cau quote goc tu van ban. Giup verify ket qua extraction.
+2. **Quote extraction**: Tính năng độc đáo - trích xuất cả giá trị và câu quote gốc từ văn bản. Giúp verify kết quả extraction.
 
-3. **Khong co few-shot**: `extract_formatter` khong ho tro examples. Chi co system prompt + context.
+3. **Không có few-shot**: `extract_formatter` không hỗ trợ examples. Chỉ có system prompt + context.
 
-4. **All values stringify**: `str(value)` convert moi gia tri (postprocessors.py:176), co the mat type information (vi du number -> string).
+4. **All values stringify**: `str(value)` convert mọi giá trị (postprocessors.py:176), có thể mất type information (ví dụ number -> string).

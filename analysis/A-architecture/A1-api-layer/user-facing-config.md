@@ -2,7 +2,7 @@
 
 ## Settings Class
 
-Dinh nghia tai `settings.py:8`:
+Định nghĩa tại `settings.py:8`:
 
 ```python
 class Settings:
@@ -23,18 +23,18 @@ class Settings:
     parallel_groupby_max_threads: int = 8
 ```
 
-### Cac field chinh:
+### Các field chính:
 
-| Field | Type | Default | Muc dich | File:Line |
+| Field | Type | Default | Mục đích | File:Line |
 |---|---|---|---|---|
-| `lm` | `LM \| None` | `None` | Language model chinh cho tat ca LLM operators | settings.py:10 |
+| `lm` | `LM \| None` | `None` | Language model chính cho tất cả LLM operators | settings.py:10 |
 | `rm` | `RM \| None` | `None` | Retrieval/embedding model cho vector search | settings.py:11 |
-| `helper_lm` | `LM \| None` | `None` | LM phu cho cascade (nho hon, nhanh hon) | settings.py:12 |
+| `helper_lm` | `LM \| None` | `None` | LM phụ cho cascade (nhỏ hơn, nhanh hơn) | settings.py:12 |
 | `reranker` | `Reranker \| None` | `None` | Cross-encoder reranker cho `sem_search` | settings.py:13 |
 | `vs` | `VS \| None` | `None` | Vector store (e.g. FaissVS) | settings.py:14 |
-| `enable_cache` | `bool` | `False` | Bat/tat cache cho LM responses va operator results | settings.py:17 |
-| `serialization_format` | `SerializationFormat` | `DEFAULT` | Dinh dang serialize DataFrame rows | settings.py:20 |
-| `parallel_groupby_max_threads` | `int` | `8` | So threads cho parallel group_by operations | settings.py:23 |
+| `enable_cache` | `bool` | `False` | Bật/tắt cache cho LM responses và operator results | settings.py:17 |
+| `serialization_format` | `SerializationFormat` | `DEFAULT` | Định dạng serialize DataFrame rows | settings.py:20 |
+| `parallel_groupby_max_threads` | `int` | `8` | Số threads cho parallel group_by operations | settings.py:23 |
 
 ### configure() method (settings.py:25):
 ```python
@@ -45,11 +45,11 @@ def configure(self, **kwargs):
         setattr(self, key, value)
 ```
 
-Validate chi co key hop le, raise `ValueError` neu key khong ton tai.
+Validate chỉ có key hợp lệ, raise `ValueError` nếu key không tồn tại.
 
 ## LM Constructor Parameters
 
-Dinh nghia tai `lm.py:67`:
+Định nghĩa tại `lm.py:67`:
 
 ```python
 def __init__(
@@ -69,7 +69,7 @@ def __init__(
 ):
 ```
 
-| Parameter | Type | Default | Muc dich |
+| Parameter | Type | Default | Mục đích |
 |---|---|---|---|
 | `model` | `str` | `"gpt-4o-mini"` | Model string cho litellm (e.g. "gpt-4o", "claude-3-opus", "ollama/llama3") |
 | `temperature` | `float` | `0.0` | Sampling temperature (deterministic by default) |
@@ -80,9 +80,9 @@ def __init__(
 | `tpm_limit` | `int \| None` | `None` | Max tokens per minute (TPM) |
 | `tokenizer` | `Tokenizer \| None` | `None` | Custom HuggingFace tokenizer |
 | `cache` | `Any` | `None` | Custom cache instance (default: InMemoryCache(1024)) |
-| `physical_usage_limit` | `UsageLimit` | `UsageLimit()` | Gioi han usage thuc te (co cache) |
-| `virtual_usage_limit` | `UsageLimit` | `UsageLimit()` | Gioi han usage ao (khong cache) |
-| `**kwargs` | `dict` | `{}` | Extra kwargs truyen thang cho litellm API |
+| `physical_usage_limit` | `UsageLimit` | `UsageLimit()` | Giới hạn usage thực tế (có cache) |
+| `virtual_usage_limit` | `UsageLimit` | `UsageLimit()` | Giới hạn usage ảo (không cache) |
+| `**kwargs` | `dict` | `{}` | Extra kwargs truyền thẳng cho litellm API |
 
 ### UsageLimit dataclass (types.py:216):
 ```python
@@ -94,7 +94,7 @@ class UsageLimit:
     total_cost_limit: float = float("inf")
 ```
 
-## Cach user configure day du
+## Cách user configure đầy đủ
 
 ```python
 import lotus
@@ -129,12 +129,12 @@ lotus.settings.configure(
 )
 ```
 
-## Luu y
+## Lưu ý
 
-1. **Thread safety**: Comment tai `settings.py:5` ghi ro "NOTE: Settings class is not thread-safe". Cac operator nhu `sem_agg` va `sem_topk` su dung `ThreadPoolExecutor` cho group_by (sem_agg.py:396-399, sem_topk.py:770-773), co the gay race condition khi doc/ghi settings.
+1. **Thread safety**: Comment tại `settings.py:5` ghi rõ "NOTE: Settings class is not thread-safe". Các operator như `sem_agg` và `sem_topk` sử dụng `ThreadPoolExecutor` cho group_by (sem_agg.py:396-399, sem_topk.py:770-773), có thể gây race condition khi đọc/ghi settings.
 
-2. **Singleton pattern**: `settings = Settings()` tai `settings.py:35` la module-level instance. Tat ca code import `lotus.settings` deu tham chieu cung 1 object.
+2. **Singleton pattern**: `settings = Settings()` tại `settings.py:35` là module-level instance. Tất cả code import `lotus.settings` đều tham chiếu cùng 1 object.
 
-3. **Cache default**: Khi `cache=None` trong LM constructor, se tao `InMemoryCache(max_size=1024)` qua `CacheFactory.create_default_cache()` (lm.py:121, cache.py:146-147). Nhung cache chi hoat dong khi `lotus.settings.enable_cache = True` (lm.py:136).
+3. **Cache default**: Khi `cache=None` trong LM constructor, sẽ tạo `InMemoryCache(max_size=1024)` qua `CacheFactory.create_default_cache()` (lm.py:121, cache.py:146-147). Nhưng cache chỉ hoạt động khi `lotus.settings.enable_cache = True` (lm.py:136).
 
-4. **rate_limit cap max_batch_size**: Neu `rate_limit` duoc set, `max_batch_size` duoc cap lai bang `min(rate_limit, max_batch_size)` (lm.py:108).
+4. **rate_limit cap max_batch_size**: Nếu `rate_limit` được set, `max_batch_size` được cap lại bằng `min(rate_limit, max_batch_size)` (lm.py:108).

@@ -1,40 +1,40 @@
 # Prompt Template: sem_sim_join
 
-## Khong co LLM Prompt
+## Không có LLM Prompt
 
-`sem_sim_join` la purely embedding-based similarity join operator. No KHONG su dung LLM va KHONG co prompt template.
+`sem_sim_join` là purely embedding-based similarity join operator. Nó KHÔNG sử dụng LLM và KHÔNG có prompt template.
 
 ## Flow
 
 ```
 df1.sem_sim_join(df2, left_on="article", right_on="category", K=1)
     |
-    |-- Load query embeddings tu left index (sem_sim_join.py:109-119)
-    |     |-- Neu left_on co index: lay vectors tu index
-    |     |-- Neu khong: dung raw text
+    |-- Load query embeddings từ left index (sem_sim_join.py:109-119)
+    |     |-- Nếu left_on có index: lấy vectors từ index
+    |     |-- Nếu không: dùng raw text
     |
     |-- Load right index (sem_sim_join.py:122-128)
     |
     |-- rm.convert_query_to_query_vector(queries)  (rm.py:53)
-    |     |-- Convert left data thanh query vectors
+    |     |-- Convert left data thành query vectors
     |
     |-- vs(query_vectors, K, ids=right_ids)        (faiss_vs.py:43)
     |     |-- Search K nearest neighbors trong right index
-    |     |-- Loc theo right DataFrame indices
+    |     |-- Lọc theo right DataFrame indices
     |
-    |-- Post-filter: bo entries voi res_id == -1     (sem_sim_join.py:142-145)
+    |-- Post-filter: bỏ entries với res_id == -1     (sem_sim_join.py:142-145)
     |
-    |-- Join results thanh DataFrame                  (sem_sim_join.py:147-166)
+    |-- Join results thành DataFrame                  (sem_sim_join.py:147-166)
 ```
 
 ## Output Columns
 
-- Tat ca columns tu left DataFrame
-- Tat ca columns tu right DataFrame
+- Tất cả columns từ left DataFrame
+- Tất cả columns từ right DataFrame
 - `_scores{score_suffix}`: Similarity scores (sem_sim_join.py:151)
 - `_left_id`, `_right_id`: Join IDs (dropped by default, kept khi `keep_index=True`) (sem_sim_join.py:163-164)
 
-## So sanh voi sem_join
+## So sánh với sem_join
 
 | Aspect | sem_sim_join | sem_join |
 |---|---|---|
@@ -46,9 +46,9 @@ df1.sem_sim_join(df2, left_on="article", right_on="category", K=1)
 | Quality | Approximate | Exact |
 | Requires index | Yes (both sides) | No |
 
-## Su dung trong Join Cascade
+## Sử dụng trong Join Cascade
 
-`sem_sim_join` duoc su dung nhu proxy model trong `sem_join` cascade (sem_join.py:336-366):
+`sem_sim_join` được sử dụng như proxy model trong `sem_join` cascade (sem_join.py:336-366):
 
 ```python
 def run_sem_sim_join(l1, l2, col1_label, col2_label):
@@ -59,4 +59,4 @@ def run_sem_sim_join(l1, l2, col1_label, col2_label):
     return out
 ```
 
-Scores tu sim_join duoc calibrate va su dung de quyet dinh pairs nao can gui den LLM oracle.
+Scores từ sim_join được calibrate và sử dụng để quyết định pairs nào cần gửi đến LLM oracle.

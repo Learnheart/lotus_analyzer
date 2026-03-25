@@ -2,7 +2,7 @@
 
 ## LM Class Overview
 
-Dinh nghia tai `models/lm.py:41`. Day la lop trung tam cua LOTUS cho tuong tac voi LLM providers.
+Định nghĩa tại `models/lm.py:41`. Đây là lớp trung tâm của LOTUS cho tương tác với LLM providers.
 
 ```
 LM (lm.py:41)
@@ -21,10 +21,10 @@ LM (lm.py:41)
 
 ## Provider Switching qua litellm
 
-LOTUS khong truc tiep implement API call cho tung provider. Thay vao do, su dung `litellm.batch_completion` (import tai lm.py:10) lam abstraction layer.
+LOTUS không trực tiếp implement API call cho từng provider. Thay vào đó, sử dụng `litellm.batch_completion` (import tại lm.py:10) làm abstraction layer.
 
-### Cach doi provider:
-Chi can thay doi model string:
+### Cách đổi provider:
+Chỉ cần thay đổi model string:
 - OpenAI: `LM(model="gpt-4o-mini")`, `LM(model="gpt-4o")`
 - Anthropic: `LM(model="claude-3-opus")`, `LM(model="claude-3-5-sonnet")`
 - Ollama (local): `LM(model="ollama/llama3")`
@@ -37,8 +37,8 @@ uncached_responses = batch_completion(
 )
 ```
 
-- `drop_params=True`: litellm tu dong bo cac params khong duoc ho tro boi provider cu the
-- `max_workers=self.max_batch_size`: so luong concurrent workers
+- `drop_params=True`: litellm tự động bỏ các params không được hỗ trợ bởi provider cụ thể
+- `max_workers=self.max_batch_size`: số lượng concurrent workers
 
 ## __call__ Method Flow (lm.py:123)
 
@@ -52,27 +52,27 @@ def __call__(
 ) -> LMOutput:
 ```
 
-Luong xu ly:
+Luồng xử lý:
 
 1. **Merge kwargs** (lm.py:130): `all_kwargs = {**self.kwargs, **kwargs}`
-2. **Set logprobs** (lm.py:133-134): Neu `logprobs=True`, set `top_logprobs=10`
+2. **Set logprobs** (lm.py:133-134): Nếu `logprobs=True`, set `top_logprobs=10`
 3. **Cache check** (lm.py:136-158):
    - Hash messages + kwargs -> `_hash_messages()` (lm.py:407)
-   - Kiem tra cache cho tung message
-   - Tach thanh cached va uncached
+   - Kiểm tra cache cho từng message
+   - Tách thành cached và uncached
 4. **Process uncached** (lm.py:163-165): `_process_uncached_messages()`
-   - Neu `tpm_limit`: `_process_with_tpm_limiting()` (lm.py:311)
-   - Neu `rate_limit`: `_process_with_rate_limiting()` (lm.py:258)
-   - Khong co limit: `batch_completion()` truc tiep (lm.py:250)
+   - Nếu `tpm_limit`: `_process_with_tpm_limiting()` (lm.py:311)
+   - Nếu `rate_limit`: `_process_with_rate_limiting()` (lm.py:258)
+   - Không có limit: `batch_completion()` trực tiếp (lm.py:250)
 5. **Update stats** (lm.py:168-177):
    - Physical stats cho uncached responses
-   - Virtual stats cho tat ca responses
-6. **Merge responses** (lm.py:180-184): Gop cached + uncached theo thu tu goc
+   - Virtual stats cho tất cả responses
+6. **Merge responses** (lm.py:180-184): Gộp cached + uncached theo thứ tự gốc
 7. **Extract outputs** (lm.py:185-190): `_get_top_choice()` -> text string
 
 ## get_completion() (lm.py:192)
 
-Helper method tien loi cho 1 call don:
+Helper method tiện lợi cho 1 call đơn:
 
 ```python
 def get_completion(
@@ -86,9 +86,9 @@ def get_completion(
 ) -> str | BaseModel:
 ```
 
-- Wrap system + user thanh messages format
-- Goi `self()` (tuc `__call__`)
-- Neu `response_format` duoc cung cap, parse output thanh Pydantic model
+- Wrap system + user thành messages format
+- Gọi `self()` (tức `__call__`)
+- Nếu `response_format` được cung cấp, parse output thành Pydantic model
 
 ## DeepSeek Detection (lm.py:612)
 
@@ -98,11 +98,11 @@ def is_deepseek(self) -> bool:
     return model_name.startswith("deepseek-r1")
 ```
 
-Duoc su dung trong `filter_formatter` (task_instructions.py:152) va `map_formatter` (task_instructions.py:249) de them deepseek-specific CoT instructions vao prompt.
+Được sử dụng trong `filter_formatter` (task_instructions.py:152) và `map_formatter` (task_instructions.py:249) để thêm deepseek-specific CoT instructions vào prompt.
 
 ## Tokenizer Support
 
-LM ho tro custom tokenizer (lm.py:113, lm.py:550-563):
+LM hỗ trợ custom tokenizer (lm.py:113, lm.py:550-563):
 ```python
 def count_tokens(self, messages: list[dict[str, str]] | str) -> int:
     custom_tokenizer: dict[str, Any] | None = None
@@ -115,4 +115,4 @@ def count_tokens(self, messages: list[dict[str, str]] | str) -> int:
     )
 ```
 
-Su dung `litellm.utils.token_counter`, `encode`, `decode` (import tai lm.py:13).
+Sử dụng `litellm.utils.token_counter`, `encode`, `decode` (import tại lm.py:13).

@@ -1,16 +1,16 @@
 # C4 - Caching Strategies trong LOTUS
 
-## Tong quan
+## Tổng quan
 
-LOTUS co **hai tang cache**: LM response cache (per-call) va operator cache (per-operator-invocation).
-Ca hai deu duoc dieu khien boi `lotus.settings.enable_cache` (default `False`) — `settings.py:17`.
+LOTUS có **hai tầng cache**: LM response cache (per-call) và operator cache (per-operator-invocation).
+Cả hai đều được điều khiển bởi `lotus.settings.enable_cache` (default `False`) — `settings.py:17`.
 
 ---
 
 ## 1. LM Response Cache
 
-### Vi tri va cach hoat dong
-Trong `LM.__call__` tai `lm.py:123-190`.
+### Vị trí và cách hoạt động
+Trong `LM.__call__` tại `lm.py:123-190`.
 
 ### Cache Key — `lm.py:407-410`
 ```python
@@ -18,21 +18,21 @@ def _hash_messages(self, messages, kwargs):
     to_hash = str(self.model) + str(messages) + str(kwargs)
     return hashlib.sha256(to_hash.encode()).hexdigest()
 ```
-Key = sha256 cua: `model_name + messages (string) + kwargs (string)`.
+Key = sha256 của: `model_name + messages (string) + kwargs (string)`.
 
-**Luu y:** Day la string concatenation, khong phai structured hashing. Hai messages giong nhau nhung khac thu tu kwargs se co key khac.
+**Lưu ý:** Đây là string concatenation, không phải structured hashing. Hai messages giống nhau nhưng khác thứ tự kwargs sẽ có key khác.
 
-### Luong xu ly khi cache bat — `lm.py:136-190`
+### Luồng xử lý khi cache bật — `lm.py:136-190`
 
-1. **Hash tat ca messages** — `lm.py:138`
-2. **Check cache** cho moi message — `lm.py:139`
-3. **Tach cached va uncached** — `lm.py:154-158`
+1. **Hash tất cả messages** — `lm.py:138`
+2. **Check cache** cho mỗi message — `lm.py:139`
+3. **Tách cached và uncached** — `lm.py:154-158`
 4. **Track cache hits** — `lm.py:160`:
    ```python
    self.stats.cache_hits += len(messages) - len(uncached_data)
    ```
-5. **Xu ly uncached** qua batch_completion — `lm.py:163-165`
-6. **Luu responses moi vao cache** — `lm.py:168-171`:
+5. **Xử lý uncached** qua batch_completion — `lm.py:163-165`
+6. **Lưu responses mới vào cache** — `lm.py:168-171`:
    ```python
    for resp, (_, hash) in zip(uncached_responses, uncached_data):
        self._update_stats(resp, is_cached=False)
@@ -40,13 +40,13 @@ Key = sha256 cua: `model_name + messages (string) + kwargs (string)`.
            self._cache_response(resp, hash)
    ```
 7. **Update virtual stats cho cached responses** — `lm.py:174-177`
-8. **Merge responses** giu dung thu tu — `lm.py:180-184`
+8. **Merge responses** giữ đúng thứ tự — `lm.py:180-184`
 
 ### Cache Response method — `lm.py:392-405`
 ```python
 def _cache_response(self, response, hash):
     if isinstance(response, OpenAIError):
-        raise response  # Khong cache errors
+        raise response  # Không cache errors
     self.cache.insert(hash, response)
 ```
 
@@ -70,12 +70,12 @@ class InMemoryCache(Cache):
             self.cache.popitem(last=False)  # LRU eviction
 ```
 
-**Dac diem:**
-- Dung `OrderedDict` tu Python standard library — `cache.py:250`
-- LRU eviction khi vuot `max_size` — `cache.py:262-263`
-- **Luu y:** `get()` khong move item len cuoi OrderedDict, nen day khong phai LRU thuc su. Items duoc evict theo thu tu insert, khong phai access.
-- O(1) cho ca get va insert
-- Mat du lieu khi process ket thuc
+**Đặc điểm:**
+- Dùng `OrderedDict` từ Python standard library — `cache.py:250`
+- LRU eviction khi vượt `max_size` — `cache.py:262-263`
+- **Lưu ý:** `get()` không move item lên cuối OrderedDict, nên đây không phải LRU thực sự. Items được evict theo thứ tự insert, không phải access.
+- O(1) cho cả get và insert
+- Mất dữ liệu khi process kết thúc
 
 ### 2.2 SQLiteCache — `cache.py:168-244`
 
@@ -86,11 +86,11 @@ class SQLiteCache(Cache):
         self._local = threading.local()  # Thread-safe connections
 ```
 
-**Dac diem:**
-- Persistent tren disk tai `~/.lotus/cache/lotus_cache.db` — `cache.py:171`
+**Đặc điểm:**
+- Persistent trên disk tại `~/.lotus/cache/lotus_cache.db` — `cache.py:171`
 - Thread-safe qua `threading.local()` — `cache.py:173`
-- `ThreadLocalConnection` wrapper tu dong close connection — `cache.py:150-165`
-- Dung `pickle` de serialize values — `cache.py:200`, `cache.py:213`
+- `ThreadLocalConnection` wrapper tự động close connection — `cache.py:150-165`
+- Dùng `pickle` để serialize values — `cache.py:200`, `cache.py:213`
 - `last_accessed` timestamp cho LRU — `cache.py:201-207`
 - Size enforcement qua SQL DELETE — `cache.py:224-238`
 
@@ -121,7 +121,7 @@ class CacheFactory:
 ```
 
 **Default:** `InMemoryCache(max_size=1024)` — `cache.py:146-147`.
-Duoc tao trong `LM.__init__` tai `lm.py:121`:
+Được tạo trong `LM.__init__` tại `lm.py:121`:
 ```python
 self.cache = cache or CacheFactory.create_default_cache()
 ```
@@ -130,10 +130,10 @@ self.cache = cache or CacheFactory.create_default_cache()
 
 ## 3. Operator-Level Cache (@operator_cache)
 
-### Vi tri
-Decorator `operator_cache` tai `cache.py:33-100`.
+### Vị trí
+Decorator `operator_cache` tại `cache.py:33-100`.
 
-### Cach hoat dong
+### Cách hoạt động
 
 ```python
 # cache.py:33-100
@@ -179,25 +179,25 @@ def operator_cache(func):
 
 ### Serialization logic — `cache.py:43-67`
 
-Ham `serialize` noi bo xu ly nhieu kieu du lieu:
-- `None`, `str`, `int`, `float`, `bool` → giu nguyen — `cache.py:48-49`
+Hàm `serialize` nội bộ xử lý nhiều kiểu dữ liệu:
+- `None`, `str`, `int`, `float`, `bool` → giữ nguyên — `cache.py:48-49`
 - `pd.DataFrame` → `df.to_json(orient="split")` — `cache.py:51`
 - `BaseModel` (Pydantic) → `model_dump()` — `cache.py:53`
 - `list`, `tuple` → recursive serialize — `cache.py:56-57`
 - `dict` → recursive serialize — `cache.py:58-59`
-- Fallback → `str(value)` voi warning — `cache.py:66-67`
+- Fallback → `str(value)` với warning — `cache.py:66-67`
 
 ### Virtual usage tracking — `cache.py:77-95`
 
-**Van de:** Khi operator result duoc cache, LLM khong duoc goi. Nhung `virtual_usage` (tong usage neu khong co cache) van can duoc track de bao cao chinh xac.
+**Vấn đề:** Khi operator result được cache, LLM không được gọi. Nhưng `virtual_usage` (tổng usage nếu không có cache) vẫn cần được track để báo cáo chính xác.
 
-**Giai phap:**
-1. Truoc khi chay operator: ghi nhan `virtual_usage_before` — `cache.py:91`
-2. Sau khi chay: tinh `delta = current - before` — `cache.py:93`
-3. Luu delta vao cache voi key `cache_key + "_usage"` — `cache.py:94`
-4. Khi cache hit: cong delta vao `model.stats.virtual_usage` — `cache.py:86`
+**Giải pháp:**
+1. Trước khi chạy operator: ghi nhận `virtual_usage_before` — `cache.py:91`
+2. Sau khi chạy: tính `delta = current - before` — `cache.py:93`
+3. Lưu delta vào cache với key `cache_key + "_usage"` — `cache.py:94`
+4. Khi cache hit: cộng delta vào `model.stats.virtual_usage` — `cache.py:86`
 
-### Cac operators su dung @operator_cache
+### Các operators sử dụng @operator_cache
 - `SemFilterDataframe.__call__` — `sem_filter.py:333`
 - `SemMapDataframe.__call__` — `sem_map.py:214`
 - `SemTopKDataframe.__call__` — `sem_topk.py:734`
@@ -228,26 +228,26 @@ class LMStats:
         cached_prompt_tokens: int = 0      # API-level cache hits
         cache_creation_tokens: int = 0     # API-level cache writes
 
-    virtual_usage: TotalUsage   # Usage neu khong co cache
-    physical_usage: TotalUsage  # Usage thuc te (co cache)
+    virtual_usage: TotalUsage   # Usage nếu không có cache
+    physical_usage: TotalUsage  # Usage thực tế (có cache)
     cache_hits: int = 0              # LM response cache hits
     operator_cache_hits: int = 0     # Operator cache hits
 ```
 
-**Hai loai usage:**
-- `virtual_usage`: Luon duoc update, ke ca khi cache hit — `lm.py:477`
-- `physical_usage`: Chi update khi khong cache hit — `lm.py:481-483`
+**Hai loại usage:**
+- `virtual_usage`: Luôn được update, kể cả khi cache hit — `lm.py:477`
+- `physical_usage`: Chỉ update khi không cache hit — `lm.py:481-483`
 
 ---
 
-## 5. Han che va Luu y
+## 5. Hạn chế và Lưu ý
 
-1. **Cache key collision risk thap nhung khong zero:** String concatenation co the tao collision khi model name chua ky tu giong messages.
+1. **Cache key collision risk thấp nhưng không zero:** String concatenation có thể tạo collision khi model name chứa ký tự giống messages.
 
-2. **InMemoryCache khong thread-safe:** OrderedDict khong co lock. Khi dung ThreadPoolExecutor (group_by), co the xay ra race condition.
+2. **InMemoryCache không thread-safe:** OrderedDict không có lock. Khi dùng ThreadPoolExecutor (group_by), có thể xảy ra race condition.
 
-3. **operator_cache cache DataFrame:** Voi DataFrame lon, bo nho co the bi day nhanh. max_size=1024 co the la qua lon cho operator cache.
+3. **operator_cache cache DataFrame:** Với DataFrame lớn, bộ nhớ có thể bị đầy nhanh. max_size=1024 có thể là quá lớn cho operator cache.
 
-4. **SQLiteCache dung pickle:** Pickle khong an toan voi untrusted data. Khong nen chia se cache file giua cac nguoi dung.
+4. **SQLiteCache dùng pickle:** Pickle không an toàn với untrusted data. Không nên chia sẻ cache file giữa các người dùng.
 
-5. **enable_cache default False:** User phai chu dong bat cache. Day la safe default nhung co the lam user bo lo optimization.
+5. **enable_cache default False:** User phải chủ động bật cache. Đây là safe default nhưng có thể làm user bỏ lỡ optimization.

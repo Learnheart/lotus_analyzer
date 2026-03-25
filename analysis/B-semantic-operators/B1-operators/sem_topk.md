@@ -9,7 +9,7 @@
 
 ## 1. Purpose & Use Cases
 
-Sap xep DataFrame theo tieu chi ngu nghia va tra ve K rows tot nhat. Su dung pairwise comparison qua LLM.
+Sắp xếp DataFrame theo tiêu chí ngữ nghĩa và trả về K rows tốt nhất. Sử dụng pairwise comparison qua LLM.
 
 **Use cases:**
 - Best match: `df.sem_topk("The {title} is best for beginners", K=3)`
@@ -22,9 +22,9 @@ Sap xep DataFrame theo tieu chi ngu nghia va tra ve K rows tot nhat. Su dung pai
 1. SemTopKDataframe.__call__()                          # sem_topk.py:735
 2.   parse_cols(user_instruction)                       # sem_topk.py:754
 3.   Column validation                                  # sem_topk.py:758-760
-4.   [Neu group_by]:
+4.   [Nếu group_by]:
 4a.    ThreadPoolExecutor → process_group() parallel    # sem_topk.py:770-773
-5.   [Neu method="quick-sem"]:
+5.   [Nếu method="quick-sem"]:
 5a.    sem_index() + sem_search() pre-sort by embedding # sem_topk.py:786-788
 6.   df2multimodal_info(df, col_li)                     # sem_topk.py:790
 7.   nle2str(user_instruction, col_li)                  # sem_topk.py:792
@@ -77,62 +77,62 @@ Document 2:
 
 ## 4. LLM Interaction
 
-- **Binary comparison**: Moi LLM call so sanh dung 2 documents (sem_topk.py:16-80)
-- **Batch comparison**: `compare_batch_binary()` gui nhieu pairs cung luc (sem_topk.py:132-173)
-- **Parse result**: `parse_ans_binary()` trich "Document 1" hoac "Document 2" tu output (sem_topk.py:83-129)
+- **Binary comparison**: Mỗi LLM call so sánh đúng 2 documents (sem_topk.py:16-80)
+- **Batch comparison**: `compare_batch_binary()` gửi nhiều pairs cùng lúc (sem_topk.py:132-173)
+- **Parse result**: `parse_ans_binary()` trích "Document 1" hoặc "Document 2" từ output (sem_topk.py:83-129)
   - Regex: `r"Document[\s*](\d+)"` (sem_topk.py:119)
   - Fallback: `r"(\d+)"` (sem_topk.py:121)
-  - Default: True (doc1 wins) khi parse that bai (sem_topk.py:125-128)
-- **DeepSeek support**: Them `<think></think>` tag instructions (sem_topk.py:72-76)
+  - Default: True (doc1 wins) khi parse thất bại (sem_topk.py:125-128)
+- **DeepSeek support**: Thêm `<think></think>` tag instructions (sem_topk.py:72-76)
 
 ## 5. Optimization
 
-| Feature | Status | Chi tiet |
+| Feature | Status | Chi tiết |
 |---|---|---|
-| Batching | Yes | compare_batch_binary gui nhieu pairs 1 lan (sem_topk.py:169) |
+| Batching | Yes | compare_batch_binary gửi nhiều pairs 1 lần (sem_topk.py:169) |
 | Caching | Yes | `@operator_cache` (sem_topk.py:734) |
-| Cascading | Yes | compare_batch_binary_cascade voi helper_lm (sem_topk.py:176-273) |
-| Early-termination | Partial | Quicksort chi sort can thiet cho top-K (sem_topk.py:479-483) |
+| Cascading | Yes | compare_batch_binary_cascade với helper_lm (sem_topk.py:176-273) |
+| Early-termination | Partial | Quicksort chỉ sort cần thiết cho top-K (sem_topk.py:479-483) |
 | Sampling | No | |
-| Safe mode | Yes | Estimate calls va tokens (sem_topk.py:393-399, 597-603) |
+| Safe mode | Yes | Estimate calls và tokens (sem_topk.py:393-399, 597-603) |
 | Parallel group_by | Yes | ThreadPoolExecutor (sem_topk.py:772) |
 
-### Sorting Methods chi tiet:
+### Sorting Methods chi tiết:
 
 **1. `llm_quicksort` (sem_topk.py:347-488)** — O(N log N) average, O(N log K) cho top-K:
-- Partition function voi pivot selection (sem_topk.py:407-463)
-- Embedding optimization: chon pivot la K-th closest element (sem_topk.py:413-416)
-- Cascade support: dung helper_lm cho low-confidence comparisons (sem_topk.py:438-455)
-- Recursive: chi sort partition can thiet cho top-K (sem_topk.py:479-483)
+- Partition function với pivot selection (sem_topk.py:407-463)
+- Embedding optimization: chọn pivot là K-th closest element (sem_topk.py:413-416)
+- Cascade support: dùng helper_lm cho low-confidence comparisons (sem_topk.py:438-455)
+- Recursive: chỉ sort partition cần thiết cho top-K (sem_topk.py:479-483)
 
 **2. `llm_heapsort` (sem_topk.py:560-621)** — O(N log N):
-- Dung `HeapDoc` class voi custom `__lt__` operator (sem_topk.py:491-557)
-- `__lt__` goi LLM cho moi comparison (sem_topk.py:526-557)
+- Dùng `HeapDoc` class với custom `__lt__` operator (sem_topk.py:491-557)
+- `__lt__` gọi LLM cho mỗi comparison (sem_topk.py:526-557)
 - `heapq.nsmallest(K, heap)` (sem_topk.py:613)
-- Moi comparison = 1 LLM call (khong batch) — cham hon quicksort
+- Mỗi comparison = 1 LLM call (không batch) — chậm hơn quicksort
 
 **3. `llm_naive_sort` (sem_topk.py:276-344)** — O(N^2):
-- So sanh tat ca pairs (N*(N-1)/2) (sem_topk.py:312-314)
-- Voting system: moi doc duoc 1 vote khi thang (sem_topk.py:327-338)
-- Sort theo so votes (sem_topk.py:341)
+- So sánh tất cả pairs (N*(N-1)/2) (sem_topk.py:312-314)
+- Voting system: mỗi doc được 1 vote khi thắng (sem_topk.py:327-338)
+- Sort theo số votes (sem_topk.py:341)
 
 **4. `quick-sem` (sem_topk.py:782-788)**:
-- Pre-sort bang embedding similarity (sem_index + sem_search)
-- Sau do dung quicksort voi embedding-optimized pivot selection
+- Pre-sort bằng embedding similarity (sem_index + sem_search)
+- Sau đó dùng quicksort với embedding-optimized pivot selection
 
 ## 6. Input/Output Contract
 
 ### Input:
 - `user_instruction: str` — Ranking criteria (sem_topk.py:736)
-- `K: int` — So rows tra ve (sem_topk.py:737)
+- `K: int` — Số rows trả về (sem_topk.py:737)
 - `method: str` — "quick", "heap", "naive", "quick-sem" (sem_topk.py:738, default="quick")
 - `cascade_threshold: float | None` — Threshold cho cascade (sem_topk.py:741)
 - `group_by: list[str]` — Group by columns (sem_topk.py:740)
 
 ### Output:
-- DataFrame voi K rows, sorted by relevance (sem_topk.py:825-827)
-- **return_explanations=True** (voi ZS_COT): Them column `explanation` (sem_topk.py:829-839)
-- **return_stats=True**: Tra ve tuple (DataFrame, stats) (sem_topk.py:841-846)
+- DataFrame với K rows, sorted by relevance (sem_topk.py:825-827)
+- **return_explanations=True** (với ZS_COT): Thêm column `explanation` (sem_topk.py:829-839)
+- **return_stats=True**: Trả về tuple (DataFrame, stats) (sem_topk.py:841-846)
 
 ### Stats format:
 ```python
@@ -150,11 +150,11 @@ stats = {
 
 ## 7. Edge Cases
 
-1. **K > len(df)**: Tra ve toan bo DataFrame (sem_topk.py:827)
-2. **Parse "Document N" that bai**: Default True — doc1 thang (sem_topk.py:125-128)
-3. **quick-sem yeu cau 1 column**: Assert error (sem_topk.py:783)
-4. **Heap method**: Moi comparison = 1 LLM call rieng le, khong batch — performance issue
-5. **Cascade cho heap**: Khong ho tro — chi quicksort co cascade (sem_topk.py:401)
+1. **K > len(df)**: Trả về toàn bộ DataFrame (sem_topk.py:827)
+2. **Parse "Document N" thất bại**: Default True — doc1 thắng (sem_topk.py:125-128)
+3. **quick-sem yêu cầu 1 column**: Assert error (sem_topk.py:783)
+4. **Heap method**: Mỗi comparison = 1 LLM call riêng lẻ, không batch — performance issue
+5. **Cascade cho heap**: Không hỗ trợ — chỉ quicksort có cascade (sem_topk.py:401)
 6. **Invalid method**: Raise `ValueError` (sem_topk.py:822-823)
 
 ## 8. Code Examples
@@ -163,20 +163,20 @@ stats = {
 # Basic top-K
 df.sem_topk("The {title} is best for beginners", K=3)
 
-# Voi heapsort
+# Với heapsort
 df.sem_topk("The {product} has best value", K=5, method="heap")
 
-# Voi embedding optimization
+# Với embedding optimization
 df = df.sem_index("title", "title_idx")
 df.sem_topk("The {title} is most relevant", K=3, method="quick-sem")
 
-# Voi cascade
+# Với cascade
 df.sem_topk("The {title} is best", K=3, cascade_threshold=0.8)
 
 # Grouped top-K
 df.sem_topk("The {product} is best", K=2, group_by=["category"])
 
-# Voi ZS-CoT explanations
+# Với ZS-CoT explanations
 df.sem_topk(
     "The {title} is most relevant",
     K=3,
@@ -187,16 +187,16 @@ df.sem_topk(
 
 ## 9. Assessment
 
-### Diem manh:
-- **Multiple algorithms**: 4 methods cho cac use cases khac nhau
-- **Smart top-K**: Quicksort chi sort phan can thiet, tiet kiem LLM calls
-- **Embedding optimization**: quick-sem dung embeddings de chon pivot tot hon
-- **Cascade support**: Quicksort ho tro cascade voi helper_lm
+### Điểm mạnh:
+- **Multiple algorithms**: 4 methods cho các use cases khác nhau
+- **Smart top-K**: Quicksort chỉ sort phần cần thiết, tiết kiệm LLM calls
+- **Embedding optimization**: quick-sem dùng embeddings để chọn pivot tốt hơn
+- **Cascade support**: Quicksort hỗ trợ cascade với helper_lm
 
-### Diem yeu:
-- **HeapDoc design**: Class variable sharing (sem_topk.py:507-511) — khong thread-safe, co the bi race condition khi dung parallel group_by
-- **Parse fragility**: Default True khi parse that bai (sem_topk.py:125) — co the anh huong ket qua sorting
-- **No stability guarantee**: Quicksort khong stable — equal elements co the bi dao order
-- **File length**: 848 dong, nhieu methods — nen tach thanh module rieng
-- **Typo**: "to to select" (sem_topk.py:53) — loi double "to"
-- **return_explanations chi voi ZS_COT**: Chi co explanation khi `strategy == ReasoningStrategy.ZS_COT` (sem_topk.py:829) — han che
+### Điểm yếu:
+- **HeapDoc design**: Class variable sharing (sem_topk.py:507-511) — không thread-safe, có thể bị race condition khi dùng parallel group_by
+- **Parse fragility**: Default True khi parse thất bại (sem_topk.py:125) — có thể ảnh hưởng kết quả sorting
+- **No stability guarantee**: Quicksort không stable — equal elements có thể bị đảo order
+- **File length**: 848 dòng, nhiều methods — nên tách thành module riêng
+- **Typo**: "to to select" (sem_topk.py:53) — lỗi double "to"
+- **return_explanations chỉ với ZS_COT**: Chỉ có explanation khi `strategy == ReasoningStrategy.ZS_COT` (sem_topk.py:829) — hạn chế

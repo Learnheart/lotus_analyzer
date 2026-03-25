@@ -1,17 +1,17 @@
 # C5 - Batching Strategies trong LOTUS
 
-## Tong quan
+## Tổng quan
 
-LOTUS su dung batching o hai tang: LM (language model) va RM (retrieval/embedding model).
-Batching cho phep gui nhieu requests dong thoi, tang throughput va giam overhead.
+LOTUS sử dụng batching ở hai tầng: LM (language model) và RM (retrieval/embedding model).
+Batching cho phép gửi nhiều requests đồng thời, tăng throughput và giảm overhead.
 
 ---
 
 ## 1. LM Batching
 
-### 1.1 Default Batching (khong rate/tpm limit)
+### 1.1 Default Batching (không rate/tpm limit)
 
-**Vi tri:** `lm.py:250-253`
+**Vị trí:** `lm.py:250-253`
 
 ```python
 uncached_responses = batch_completion(
@@ -19,20 +19,20 @@ uncached_responses = batch_completion(
 )
 ```
 
-- Su dung `litellm.batch_completion` — import tai `lm.py:10`
+- Sử dụng `litellm.batch_completion` — import tại `lm.py:10`
 - `max_workers=self.max_batch_size` — concurrent threads = batch size
 - Default `max_batch_size=64` — `lm.py:73`
-- `drop_params=True` — litellm tu dong bo cac params khong duoc model ho tro
-- Gui **tat ca uncached messages** trong mot batch call
-- Progress bar update sau khi batch hoan tat — `lm.py:253`
+- `drop_params=True` — litellm tự động bỏ các params không được model hỗ trợ
+- Gửi **tất cả uncached messages** trong một batch call
+- Progress bar update sau khi batch hoàn tất — `lm.py:253`
 
 ### 1.2 Rate-Limited Batching
 
-**Vi tri:** `lm.py:258-303` — `_process_with_rate_limiting`
+**Vị trí:** `lm.py:258-303` — `_process_with_rate_limiting`
 
-**Khi nao kich hoat:** `self.rate_limit is not None` — `lm.py:247`
+**Khi nào kích hoạt:** `self.rate_limit is not None` — `lm.py:247`
 
-**Cach hoat dong:**
+**Cách hoạt động:**
 ```python
 # lm.py:276-303
 num_batches = math.ceil(len(batch) / self.max_batch_size)
@@ -51,24 +51,24 @@ for i in range(num_batches):
             time.sleep(to_sleep)
 ```
 
-**Chi tiet:**
-- `max_batch_size` bi cap boi `min(rate_limit, max_batch_size)` — `lm.py:108`
-- Moi sub-batch gui dong thoi qua `batch_completion`
-- Delay giua batches = `required_time - actual_elapsed` — `lm.py:300-302`
-- Khong sleep sau batch cuoi — `lm.py:299`
+**Chi tiết:**
+- `max_batch_size` bị cấp bởi `min(rate_limit, max_batch_size)` — `lm.py:108`
+- Mỗi sub-batch gửi đồng thời qua `batch_completion`
+- Delay giữa batches = `required_time - actual_elapsed` — `lm.py:300-302`
+- Không sleep sau batch cuối — `lm.py:299`
 
-**Vi du:** rate_limit=60 (60 RPM), max_batch_size=64:
-- max_batch_size bi cap = min(60, 64) = 60
-- Moi batch: 60 requests dong thoi
-- Delay giua batches: 60 seconds - elapsed time
+**Ví dụ:** rate_limit=60 (60 RPM), max_batch_size=64:
+- max_batch_size bị cấp = min(60, 64) = 60
+- Mỗi batch: 60 requests đồng thời
+- Delay giữa batches: 60 seconds - elapsed time
 
 ### 1.3 TPM-Limited Batching
 
-**Vi tri:** `lm.py:311-390` — `_process_with_tpm_limiting`
+**Vị trí:** `lm.py:311-390` — `_process_with_tpm_limiting`
 
-**Khi nao kich hoat:** `self.tpm_limit is not None` — `lm.py:245`
+**Khi nào kích hoạt:** `self.tpm_limit is not None` — `lm.py:245`
 
-**Cach hoat dong:**
+**Cách hoạt động:**
 
 1. **95% Safety buffer** — `lm.py:317`:
    ```python
@@ -85,7 +85,7 @@ for i in range(num_batches):
        token_estimates.append(est)
    ```
 
-3. **Token usage tracking** voi 60-second window — `lm.py:305-309`:
+3. **Token usage tracking** với 60-second window — `lm.py:305-309`:
    ```python
    def _get_tokens_used_in_last_minute(self):
        current_time = time.time()
@@ -93,8 +93,8 @@ for i in range(num_batches):
            self._token_usage_history.popleft()  # Evict old entries
        return sum(tokens for _, tokens in self._token_usage_history)
    ```
-   - `_token_usage_history` la `deque` — `lm.py:103`
-   - Moi entry: `(timestamp, actual_tokens_used)`
+   - `_token_usage_history` là `deque` — `lm.py:103`
+   - Mỗi entry: `(timestamp, actual_tokens_used)`
 
 4. **Dynamic sub-batch sizing** — `lm.py:332-358`:
    ```python
@@ -114,8 +114,8 @@ for i in range(num_batches):
            else:
                break
    ```
-   - Tinh `available_tokens` = tpm_limit * 0.95 - tokens used in last minute
-   - Them requests vao sub-batch cho den khi het budget
+   - Tính `available_tokens` = tpm_limit * 0.95 - tokens used in last minute
+   - Thêm requests vào sub-batch cho đến khi hết budget
    - `effective_max_batch` = `self.max_batch_size` — `lm.py:344`
 
 5. **Record actual usage** — `lm.py:367-369`:
@@ -124,7 +124,7 @@ for i in range(num_batches):
    self._token_usage_history.append((start_time, actual_tokens))
    ```
 
-6. **Wait khi het token budget** — `lm.py:380-388`:
+6. **Wait khi hết token budget** — `lm.py:380-388`:
    ```python
    else:  # sub_batch is empty
        wait_time = 1.0
@@ -133,10 +133,10 @@ for i in range(num_batches):
        pbar.set_postfix_str(f"TPM Limit reached, waiting {wait_time:.1f}s")
        time.sleep(wait_time)
    ```
-   - Tinh thoi gian cho den khi entry cu nhat expire (> 60s)
-   - Hien thi "TPM Limit reached" tren progress bar
+   - Tính thời gian chờ đến khi entry cũ nhất expire (> 60s)
+   - Hiển thị "TPM Limit reached" trên progress bar
 
-7. **RPM enforcement** khi co ca rate_limit — `lm.py:374-379`:
+7. **RPM enforcement** khi có cả rate_limit — `lm.py:374-379`:
    ```python
    if self.rate_limit is not None:
        elapsed = time.time() - start_time
@@ -169,8 +169,8 @@ def _embed(self, docs):
 ```
 
 - Default `max_batch_size=64` — `sentence_transformers_rm.py:29`
-- Dung `SentenceTransformer.encode()` — GPU-accelerated
-- `convert_to_base_data` xu ly ImageDtype → base types
+- Dùng `SentenceTransformer.encode()` — GPU-accelerated
+- `convert_to_base_data` xử lý ImageDtype → base types
 
 ### 2.2 LiteLLMRM — `litellm_rm.py:45-71`
 
@@ -189,37 +189,37 @@ def _embed(self, docs):
 ```
 
 - Default `max_batch_size=64` — `litellm_rm.py:28`
-- Optional `truncate_limit` de cat text qua dai — `litellm_rm.py:29`
-- Dung `litellm.embedding()` — API call
+- Optional `truncate_limit` để cắt text quá dài — `litellm_rm.py:29`
+- Dùng `litellm.embedding()` — API call
 
 ---
 
 ## 3. Batching trong Operators
 
 ### 3.1 sem_filter — batch LM calls
-Tat ca docs duoc tao prompts, roi gui ca batch den `model(inputs)` — `sem_filter.py:112-114`.
-LM noi bo xu ly batching.
+Tất cả docs được tạo prompts, rồi gửi cả batch đến `model(inputs)` — `sem_filter.py:112-114`.
+LM nội bộ xử lý batching.
 
 ### 3.2 sem_join — batch per left element
-Tat ca pairs (l1 x l2) duoc tao docs, roi gui mot batch duy nhat — `sem_join.py:128-147`.
-So pairs = len(l1) * len(l2).
+Tất cả pairs (l1 x l2) được tạo docs, rồi gửi một batch duy nhất — `sem_join.py:128-147`.
+Số pairs = len(l1) * len(l2).
 
 ### 3.3 sem_topk — batch per partition
-Moi partition step trong quicksort tao pairs roi gui batch — `sem_topk.py:426-428`.
-So pairs moi partition = high - low (co the lon).
+Mỗi partition step trong quicksort tạo pairs rồi gửi batch — `sem_topk.py:426-428`.
+Số pairs mỗi partition = high - low (có thể lớn).
 
 ### 3.4 sem_agg — batch per tree level
-Moi level cua aggregation tree tao batch prompts — `sem_agg.py:211`.
-So prompts moi level giam theo context capacity.
+Mỗi level của aggregation tree tạo batch prompts — `sem_agg.py:211`.
+Số prompts mỗi level giảm theo context capacity.
 
 ---
 
-## 4. Bang tom tat
+## 4. Bảng tóm tắt
 
 | Component | Default batch size | Batching mechanism | Rate control |
 |-----------|-------------------|-------------------|--------------|
-| LM (default) | 64 | `litellm.batch_completion` | Khong |
+| LM (default) | 64 | `litellm.batch_completion` | Không |
 | LM (rate limited) | min(rate_limit, 64) | Sub-batches + sleep | RPM |
-| LM (TPM limited) | 64 (cap boi token budget) | Dynamic sub-batches | TPM + optional RPM |
-| SentenceTransformersRM | 64 | Loop + `encoder.encode()` | Khong |
-| LiteLLMRM | 64 | Loop + `litellm.embedding()` | Khong |
+| LM (TPM limited) | 64 (cấp bởi token budget) | Dynamic sub-batches | TPM + optional RPM |
+| SentenceTransformersRM | 64 | Loop + `encoder.encode()` | Không |
+| LiteLLMRM | 64 | Loop + `litellm.embedding()` | Không |

@@ -5,11 +5,11 @@
 - **Accessor line**: 10 (`@pd.api.extensions.register_dataframe_accessor("sem_dedup")`)
 - **Type**: Unary operator
 - **Requires**: `lotus.settings.rm` + `lotus.settings.vs` (sem_dedup.py:38-43)
-- **LLM**: Khong dung LLM — pure embedding-based
+- **LLM**: Không dùng LLM — pure embedding-based
 
 ## 1. Purpose & Use Cases
 
-Loai bo cac duplicate rows dua tren embedding similarity. Dung connected components algorithm de xu ly transitive duplicates (A~B, B~C => loai C).
+Loại bỏ các duplicate rows dựa trên embedding similarity. Dùng connected components algorithm để xử lý transitive duplicates (A~B, B~C => loại C).
 
 **Use cases:**
 - Data deduplication: `df.sem_dedup("title", threshold=0.9)`
@@ -19,7 +19,7 @@ Loai bo cac duplicate rows dua tren embedding similarity. Dung connected compone
 
 ```
 1. SemDedupByDataframe.__call__()                       # sem_dedup.py:33
-2.   Validate rm va vs                                   # sem_dedup.py:38-43
+2.   Validate rm và vs                                   # sem_dedup.py:38-43
 3.   self._obj.sem_sim_join(self._obj, col, col, len)   # sem_dedup.py:45
 4.   Filter theo threshold: _scores > threshold          # sem_dedup.py:46
 5.   Remove self-matches: left != right                  # sem_dedup.py:47
@@ -34,15 +34,15 @@ Loai bo cac duplicate rows dua tren embedding similarity. Dung connected compone
 
 ## 3. Prompt Template (COPY VERBATIM)
 
-Khong co prompt — sem_dedup khong dung LLM.
+Không có prompt — sem_dedup không dùng LLM.
 
 ## 4. LLM Interaction
 
-**Khong co LLM interaction.** Chi dung sem_sim_join noi bo (sem_dedup.py:45).
+**Không có LLM interaction.** Chỉ dùng sem_sim_join nội bộ (sem_dedup.py:45).
 
 ## 5. Optimization
 
-| Feature | Status | Chi tiet |
+| Feature | Status | Chi tiết |
 |---|---|---|
 | Batching | N/A | Embedding-based |
 | Caching | Yes | `@operator_cache` (sem_dedup.py:32) |
@@ -51,23 +51,23 @@ Khong co prompt — sem_dedup khong dung LLM.
 ## 6. Input/Output Contract
 
 ### Input:
-- `col_name: str` — Column de dedup (sem_dedup.py:36)
+- `col_name: str` — Column để dedup (sem_dedup.py:36)
 - `threshold: float` — Similarity threshold (sem_dedup.py:37)
 
 ### Output:
-- DataFrame voi duplicate rows da bi loai (sem_dedup.py:91)
-- Giu lai row dau tien cua moi connected component (sem_dedup.py:88-89)
+- DataFrame với duplicate rows đã bị loại (sem_dedup.py:91)
+- Giữ lại row đầu tiên của mỗi connected component (sem_dedup.py:88-89)
 
-### Yeu cau:
-- Column phai duoc index truoc bang sem_index()
+### Yêu cầu:
+- Column phải được index trước bằng sem_index()
 
 ## 7. Edge Cases
 
-1. **Threshold qua thap**: Nhieu rows bi group lai, mat nhieu data
-2. **Threshold qua cao**: Khong loai duoc duplicate nao
-3. **Self-join**: sem_sim_join voi chinh no, K=len(df) (sem_dedup.py:45) — O(N^2) comparisons
-4. **Transitive dedup**: A~B, B~C => A, B, C trong 1 component, chi giu A (sem_dedup.py:88-89)
-5. **Value-based filtering**: Filter theo `col_name` values, khong theo index (sem_dedup.py:47, 91) — co the co van de neu nhieu rows co cung value
+1. **Threshold quá thấp**: Nhiều rows bị group lại, mất nhiều data
+2. **Threshold quá cao**: Không loại được duplicate nào
+3. **Self-join**: sem_sim_join với chính nó, K=len(df) (sem_dedup.py:45) — O(N^2) comparisons
+4. **Transitive dedup**: A~B, B~C => A, B, C trong 1 component, chỉ giữ A (sem_dedup.py:88-89)
+5. **Value-based filtering**: Filter theo `col_name` values, không theo index (sem_dedup.py:47, 91) — có thể có vấn đề nếu nhiều rows có cùng value
 
 ## 8. Code Examples
 
@@ -84,14 +84,14 @@ df.sem_dedup("title", threshold=0.95)
 
 ## 9. Assessment
 
-### Diem manh:
-- **Transitive dedup**: Connected components xu ly transitive similarity dung cach
-- **No LLM cost**: Pure embedding-based — nhanh va re
-- **Simple API**: Chi can col_name va threshold
+### Điểm mạnh:
+- **Transitive dedup**: Connected components xử lý transitive similarity đúng cách
+- **No LLM cost**: Pure embedding-based — nhanh và rẻ
+- **Simple API**: Chỉ cần col_name và threshold
 
-### Diem yeu:
-- **O(N^2) memory**: Self-join voi K=len(df) (sem_dedup.py:45) — khong scale cho datasets lon
-- **Value-based comparison**: Filter dung value equality (`col_l != col_r`) tai sem_dedup.py:47 — khong phai index-based, co the sai khi nhieu rows co cung value
-- **First-wins strategy**: Giu row dau tien cua component (sem_dedup.py:88-89) — khong co option chon representative
-- **No cluster info output**: Khong tra ve cluster/component information
-- **DFS stack-based**: `find_connected_components` dung iterative DFS (sem_dedup.py:67-74) — tot cho avoiding recursion limit
+### Điểm yếu:
+- **O(N^2) memory**: Self-join với K=len(df) (sem_dedup.py:45) — không scale cho datasets lớn
+- **Value-based comparison**: Filter dùng value equality (`col_l != col_r`) tại sem_dedup.py:47 — không phải index-based, có thể sai khi nhiều rows có cùng value
+- **First-wins strategy**: Giữ row đầu tiên của component (sem_dedup.py:88-89) — không có option chọn representative
+- **No cluster info output**: Không trả về cluster/component information
+- **DFS stack-based**: `find_connected_components` dùng iterative DFS (sem_dedup.py:67-74) — tốt cho avoiding recursion limit

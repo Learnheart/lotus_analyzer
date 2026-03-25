@@ -2,7 +2,7 @@
 
 ## Trace: `df.sem_filter("the {title} is about AI")`
 
-### Gia dinh:
+### Giả định:
 ```python
 import lotus
 from lotus.models import LM
@@ -18,23 +18,23 @@ df.sem_filter("the {title} is about AI")
 ```
 df.sem_filter("the {title} is about AI")
   |
-  |-- pandas tao SemFilterDataframe(df) -> self._obj = df
-  |-- Goi __call__("the {title} is about AI")
-  |-- @operator_cache kiem tra cache truoc (cache.py:33)
+  |-- pandas tạo SemFilterDataframe(df) -> self._obj = df
+  |-- Gọi __call__("the {title} is about AI")
+  |-- @operator_cache kiểm tra cache trước (cache.py:33)
   |     |-- hash(self._obj + args + kwargs) -> cache_key
-  |     |-- Neu cache hit -> return cached result
-  |     |-- Neu cache miss -> tiep tuc
+  |     |-- Nếu cache hit -> return cached result
+  |     |-- Nếu cache miss -> tiếp tục
   |
-  |-- Kiem tra lotus.settings.lm is not None (sem_filter.py:351)
+  |-- Kiểm tra lotus.settings.lm is not None (sem_filter.py:351)
   |
   |-- parse_cols("the {title} is about AI") -> ["title"]
   |     (nl_expression.py:4, regex: r"(?<!\{)\{(?!\{)(.*?)(?<!\})\}(?!\})")
   |
-  |-- Kiem tra "title" in df.columns (sem_filter.py:363-365)
+  |-- Kiểm tra "title" in df.columns (sem_filter.py:363-365)
   |
   |-- df2multimodal_info(df, ["title"]) -> multimodal_data
   |     (task_instructions.py:364)
-  |     Ket qua:
+  |     Kết quả:
   |     [
   |       {"text": "[Title]: <<Machine Learning 101>>\n", "image": {}},
   |       {"text": "[Title]: <<Cooking for Beginners>>\n", "image": {}}
@@ -50,11 +50,11 @@ df.sem_filter("the {title} is about AI")
 ```
 sem_filter(multimodal_data, lm, "the Title is about AI", default=True)
   |
-  |-- Voi moi doc trong multimodal_data:
+  |-- Với mỗi doc trong multimodal_data:
   |     |-- filter_formatter(model, doc, "the Title is about AI")
   |           (task_instructions.py:87)
   |
-  |     Tao messages:
+  |     Tạo messages:
   |     [
   |       {"role": "system", "content":
   |         "The user will provide a claim and some relevant context.\n
@@ -79,17 +79,17 @@ LM.__call__(messages=[msg1, msg2])
   |
   |-- all_kwargs = {temperature: 0.0, max_completion_tokens: 512}
   |
-  |-- Neu enable_cache:
-  |     |-- hash moi message:
+  |-- Nếu enable_cache:
+  |     |-- hash mỗi message:
   |     |     _hash_messages(msg, kwargs) (lm.py:407)
   |     |     -> sha256(str(model) + str(messages) + str(kwargs))
-  |     |-- Kiem tra cache: cache.get(hash)
-  |     |-- Tach cached vs uncached
+  |     |-- Kiểm tra cache: cache.get(hash)
+  |     |-- Tách cached vs uncached
   |
   |-- _process_uncached_messages(uncached_data, kwargs)
   |     (lm.py:215)
   |     |
-  |     |-- Khong co rate_limit hay tpm_limit:
+  |     |-- Không có rate_limit hay tpm_limit:
   |     |     batch_completion(
   |     |       "gpt-4o-mini",
   |     |       [msg1, msg2],
@@ -100,21 +100,21 @@ LM.__call__(messages=[msg1, msg2])
   |     |     )
   |     |     (lm.py:250-251)
   |     |
-  |     |-- litellm gui 2 requests song song den OpenAI API
-  |     |-- Nhan 2 ModelResponse objects
+  |     |-- litellm gửi 2 requests song song đến OpenAI API
+  |     |-- Nhận 2 ModelResponse objects
   |
-  |-- _update_stats(response, is_cached=False) cho moi uncached response
+  |-- _update_stats(response, is_cached=False) cho mỗi uncached response
   |     (lm.py:451)
   |     |-- calculate_cost_from_response(response) (pricing.py:10)
   |     |     -> litellm.completion_cost(completion_response=response)
-  |     |-- Cap nhat physical_usage va virtual_usage
-  |     |-- Kiem tra usage limits
+  |     |-- Cập nhật physical_usage và virtual_usage
+  |     |-- Kiểm tra usage limits
   |
-  |-- _get_top_choice(response) cho moi response
+  |-- _get_top_choice(response) cho mỗi response
   |     (lm.py:485)
-  |     |-- Kiem tra isinstance(response, (AuthenticationError, OpenAIError))
+  |     |-- Kiểm tra isinstance(response, (AuthenticationError, OpenAIError))
   |     |-- Return response.choices[0].message.content
-  |     |-- Vi du: "Answer: True", "Answer: False"
+  |     |-- Ví dụ: "Answer: True", "Answer: False"
   |
   |-- Return LMOutput(outputs=["Answer: True", "Answer: False"], logprobs=None)
 ```
@@ -126,23 +126,23 @@ filter_postprocess(["Answer: True", "Answer: False"], model, default=True)
   |
   |-- get_cot_postprocessor(model) (postprocessors.py:102)
   |     |-- model.get_model_name() -> "gpt-4o-mini"
-  |     |-- Khong match "deepseek-r1" -> dung cot_postprocessor mac dinh
+  |     |-- Không match "deepseek-r1" -> dùng cot_postprocessor mặc định
   |
   |-- cot_postprocessor(llm_answers) (postprocessors.py:12)
-  |     |-- Voi "Answer: True":
+  |     |-- Với "Answer: True":
   |     |     answer_idx = find("Answer:") = 0
-  |     |     reasoning = "" (khong co reasoning truoc "Answer:")
+  |     |     reasoning = "" (không có reasoning trước "Answer:")
   |     |     answer = "True"
-  |     |-- Voi "Answer: False":
+  |     |-- Với "Answer: False":
   |     |     answer = "False"
   |     |-- outputs = ["True", "False"]
   |     |-- explanations = ["", ""]
   |
-  |-- process_outputs(answer) cho moi answer:
+  |-- process_outputs(answer) cho mỗi answer:
   |     (postprocessors.py:200)
   |     |-- "True" in "True" -> return True
   |     |-- "False" in "False" -> return False
-  |     |-- Neu khong parse duoc -> return default (True)
+  |     |-- Nếu không parse được -> return default (True)
   |
   |-- Return SemanticFilterPostprocessOutput(
   |     raw_outputs=["Answer: True", "Answer: False"],
@@ -156,7 +156,7 @@ filter_postprocess(["Answer: True", "Answer: False"], model, default=True)
 ```
 return_all=False (default):
   |
-  |-- ids = [0]  (chi index 0 co output=True)
+  |-- ids = [0]  (chỉ index 0 có output=True)
   |-- new_df = df.iloc[[0]]
   |     -> DataFrame({"title": ["Machine Learning 101"]})
   |
@@ -164,12 +164,12 @@ return_all=False (default):
   |
   |-- Return new_df
 
-Ket qua cuoi cung:
+Kết quả cuối cùng:
          title
 0  Machine Learning 101
 ```
 
-## Tong ket call stack
+## Tổng kết call stack
 
 ```
 df.sem_filter("the {title} is about AI")

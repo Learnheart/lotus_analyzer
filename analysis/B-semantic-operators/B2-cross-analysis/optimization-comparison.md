@@ -1,6 +1,6 @@
 # B2 — Optimization Comparison Matrix
 
-> **So sanh** cac optimization techniques giua tat ca operators.
+> **So sánh** các optimization techniques giữa tất cả operators.
 
 ## Master Optimization Matrix
 
@@ -19,25 +19,25 @@
 | sem_partition_by | N/A | Yes (sem_partition_by.py:60) | N/A | No | No | No | No |
 | sem_cluster_by | N/A | Yes (sem_cluster_by.py:57) | N/A | No | No | No | No |
 
-## Batching Chi Tiet
+## Batching Chi Tiết
 
 ### LLM Batching:
-- **sem_filter**: Gui toan bo `inputs` list 1 lan: `model(inputs, ...)` (sem_filter.py:112-114)
-- **sem_map**: Tuong tu: `model(inputs, ...)` (sem_map.py:102)
-- **sem_join**: Gui toan bo M*N pairs qua sem_filter 1 lan (sem_join.py:137)
+- **sem_filter**: Gửi toàn bộ `inputs` list 1 lần: `model(inputs, ...)` (sem_filter.py:112-114)
+- **sem_map**: Tương tự: `model(inputs, ...)` (sem_map.py:102)
+- **sem_join**: Gửi toàn bộ M*N pairs qua sem_filter 1 lần (sem_join.py:137)
 - **sem_extract**: `model(inputs, ...)` (sem_extract.py:90-92)
-- **sem_topk**: `compare_batch_binary` gui batch pairs (sem_topk.py:169). Nhung HeapDoc.`__lt__` gui 1 pair/call (sem_topk.py:548) — heap method khong batch
+- **sem_topk**: `compare_batch_binary` gửi batch pairs (sem_topk.py:169). Nhưng HeapDoc.`__lt__` gửi 1 pair/call (sem_topk.py:548) — heap method không batch
 
 ### Token-aware Batching (sem_agg only):
-- Dem tokens cua template + documents (sem_agg.py:174-181)
-- Gop documents vao batch cho den khi dat limit (sem_agg.py:183)
+- Đếm tokens của template + documents (sem_agg.py:174-181)
+- Gộp documents vào batch cho đến khi đạt limit (sem_agg.py:183)
 - Limit: `model.max_ctx_len - model.max_tokens` (sem_agg.py:183)
 
 ### Embedding Batching:
-- **sem_index**: `rm(df[col_name].tolist())` — batch toan bo column (sem_index.py:74)
+- **sem_index**: `rm(df[col_name].tolist())` — batch toàn bộ column (sem_index.py:74)
 - **sem_sim_join**: `rm.convert_query_to_query_vector(queries)` — batch queries (sem_sim_join.py:130)
 
-## Cascade Chi Tiet
+## Cascade Chi Tiết
 
 ### sem_filter Cascade (sem_filter.py:396-530):
 
@@ -67,13 +67,13 @@
 ```
 
 **Proxy models**:
-1. `ProxyModel.HELPER_LM` (sem_filter.py:407): Chay `lotus.settings.helper_lm` voi logprobs, calibrate qua `calibrate_llm_logprobs()` (cascade_utils.py:33-39)
-2. `ProxyModel.EMBEDDING_MODEL` (sem_filter.py:435): Dung `sem_search` de lay similarity scores
+1. `ProxyModel.HELPER_LM` (sem_filter.py:407): Chạy `lotus.settings.helper_lm` với logprobs, calibrate qua `calibrate_llm_logprobs()` (cascade_utils.py:33-39)
+2. `ProxyModel.EMBEDDING_MODEL` (sem_filter.py:435): Dùng `sem_search` để lấy similarity scores
 
 **Threshold learning** (sem_filter.py:132-222):
-1. Importance sampling lay sample (cascade_utils.py:8-30)
-2. Chay oracle LLM tren sample (sem_filter.py:196-208)
-3. `learn_cascade_thresholds()` tim (t+, t-) thoa man recall/precision targets (cascade_utils.py:42-144)
+1. Importance sampling lấy sample (cascade_utils.py:8-30)
+2. Chạy oracle LLM trên sample (sem_filter.py:196-208)
+3. `learn_cascade_thresholds()` tìm (t+, t-) thỏa mãn recall/precision targets (cascade_utils.py:42-144)
 
 ### sem_join Cascade (sem_join.py:180-333, 417-527):
 
@@ -107,11 +107,11 @@
 ```
 
 ### sem_topk Cascade (sem_topk.py:176-273):
-- Dung `helper_lm` voi logprobs cho comparisons
+- Dùng `helper_lm` với logprobs cho comparisons
 - `cascade_threshold`: confidence threshold (sem_topk.py:251)
 - Low confidence → send to large model (sem_topk.py:256-270)
 
-## Safe Mode Chi Tiet
+## Safe Mode Chi Tiết
 
 | Operator | Estimation method | File:Line |
 |---|---|---|
@@ -120,13 +120,13 @@
 | sem_join | `tokens_per_call * M*N` | sem_join.py:106-120 |
 | sem_topk | Method-specific estimates | sem_topk.py:393-399, 597-603 |
 | sem_extract | `sum(model.count_tokens(input))` * N calls | sem_extract.py:83-85 |
-| sem_agg | TODO — chua implement | sem_agg.py:151-153 |
+| sem_agg | TODO — chưa implement | sem_agg.py:151-153 |
 
-**show_safe_mode()** (utils.py): Hien thi estimated cost va total calls, cho user confirm truoc khi chay.
+**show_safe_mode()** (utils.py): Hiển thị estimated cost và total calls, cho user confirm trước khi chạy.
 
 ## Parallel GroupBy
 
-Chi 2 operators ho tro parallel group_by:
+Chỉ 2 operators hỗ trợ parallel group_by:
 - **sem_agg**: `ThreadPoolExecutor(max_workers=lotus.settings.parallel_groupby_max_threads)` (sem_agg.py:398)
 - **sem_topk**: `ThreadPoolExecutor(max_workers=lotus.settings.parallel_groupby_max_threads)` (sem_topk.py:772)
 
@@ -136,11 +136,11 @@ Chi 2 operators ho tro parallel group_by:
 
 | Operator | LLM Calls | Embedding Calls | Total Complexity |
 |---|---|---|---|
-| sem_filter | O(N) | 0 (hoac O(N) cho cascade) | O(N) |
+| sem_filter | O(N) | 0 (hoặc O(N) cho cascade) | O(N) |
 | sem_map | O(N) | 0 | O(N) |
 | sem_join | O(M*N) | O(M+N) cho cascade | O(M*N) worst case |
 | sem_agg | O(N/batch * levels) | 0 | O(N/B * log(N/B)) |
-| sem_topk (quick) | O(N log K) avg | 0 (hoac O(N) cho quick-sem) | O(N log K) |
+| sem_topk (quick) | O(N log K) avg | 0 (hoặc O(N) cho quick-sem) | O(N log K) |
 | sem_topk (heap) | O(N log N) | 0 | O(N log N) |
 | sem_topk (naive) | O(N^2) | 0 | O(N^2) |
 | sem_extract | O(N) | 0 | O(N) |

@@ -1,27 +1,27 @@
 # B2 — Operator Composition & Pipeline
 
-> **Phan tich** cach cac operators compose thanh pipelines, data flow giua operators.
+> **Phân tích** cách các operators compose thành pipelines, data flow giữa operators.
 
 ## 1. Composition Model
 
-LOTUS operators compose qua DataFrame chaining — output cua operator nay la input cua operator tiep theo:
+LOTUS operators compose qua DataFrame chaining — output của operator này là input của operator tiếp theo:
 
 ```python
 result = (
     df
-    .sem_index("text", "text_idx")          # Side-effect: tao index
+    .sem_index("text", "text_idx")          # Side-effect: tạo index
     .sem_search("text", "AI topic", K=20)   # Filter: 20 rows
     .sem_filter("The {text} is about ML")   # Filter: subset of 20
-    .sem_map("Summarize {text}")            # Transform: them column _map
+    .sem_map("Summarize {text}")            # Transform: thêm column _map
     .sem_agg("Combine all summaries")       # Aggregate: 1 row
 )
 ```
 
-## 2. Data Flow Giua Operators
+## 2. Data Flow Giữa Operators
 
 ### DataFrame Attributes Flow
 
-Moi DataFrame co `attrs` dict chua metadata. Quan trong nhat la `index_dirs`:
+Mỗi DataFrame có `attrs` dict chứa metadata. Quan trọng nhất là `index_dirs`:
 
 ```
 df.attrs["index_dirs"] = {
@@ -29,14 +29,14 @@ df.attrs["index_dirs"] = {
 }
 ```
 
-**Operators tao index_dirs**:
+**Operators tạo index_dirs**:
 - `sem_index`: `self._obj.attrs["index_dirs"][col_name] = index_dir` (sem_index.py:76)
 
-**Operators truyen index_dirs**:
+**Operators truyền index_dirs**:
 - `sem_search`: `new_df.attrs["index_dirs"] = self._obj.attrs.get("index_dirs", None)` (sem_search.py:141)
 - `sem_filter` (return_all=False): `new_df.attrs["index_dirs"] = self._obj.attrs.get("index_dirs", None)` (sem_filter.py:564)
 
-**Operators khong truyen index_dirs**: Hau het operators khac (sem_map, sem_extract, etc.) dung `self._obj.copy()` — attrs co the bi mat!
+**Operators không truyền index_dirs**: Hầu hết operators khác (sem_map, sem_extract, etc.) dùng `self._obj.copy()` — attrs có thể bị mất!
 
 ### _lotus_partition_id Flow
 
@@ -130,7 +130,7 @@ DataFrame(N rows) → sem_index → DataFrame(N, index)
                    → DataFrame(M rows, M <= N)
 ```
 
-### Pattern 6: TopK voi Embedding Pre-sort
+### Pattern 6: TopK với Embedding Pre-sort
 ```python
 df = df.sem_index("title", "title_idx")
 top = df.sem_topk("The {title} is most relevant", K=5, method="quick-sem")
@@ -146,7 +146,7 @@ DataFrame(N rows) → sem_topk(quick-sem)
 
 ## 4. Intermediate DataFrame State
 
-Moi operator tra ve DataFrame voi specific state changes:
+Mỗi operator trả về DataFrame với specific state changes:
 
 | Operator | Rows | New Columns | Attrs Changes | Index Changes |
 |---|---|---|---|---|
@@ -168,23 +168,23 @@ Moi operator tra ve DataFrame voi specific state changes:
 
 ### Risk 1: index_dirs Loss
 ```python
-# index_dirs bi mat sau sem_map vi dung .copy()
+# index_dirs bị mất sau sem_map vì dùng .copy()
 df = df.sem_index("text", "idx")
-df2 = df.sem_map("Process {text}")  # df2 khong co index_dirs!
+df2 = df.sem_map("Process {text}")  # df2 không có index_dirs!
 df2.sem_search("text", "query", K=5)  # KeyError!
 ```
 
 ### Risk 2: sem_index Init Overwrite
 ```python
 df.attrs["index_dirs"] = {"col1": "idx1"}
-df.sem_index  # __init__ runs, sets attrs["index_dirs"] = {} → mat "col1" index!
+df.sem_index  # __init__ runs, sets attrs["index_dirs"] = {} → mất "col1" index!
 ```
 
 ### Risk 3: Mutate vs Copy Confusion
 ```python
 df.sem_partition_by(fn)  # mutates df in-place
 df.sem_map("...")        # returns new copy
-# df van co _lotus_partition_id, nhung new_df khong co
+# df vẫn có _lotus_partition_id, nhưng new_df không có
 ```
 
 ### Risk 4: Column Name Collision
@@ -195,8 +195,8 @@ df.sem_map("...", suffix="_map")  # Overwrite _map column!
 
 ## 6. Recommended Pipeline Best Practices
 
-1. **Index som**: Goi `sem_index()` dau pipeline, truoc bat ky operator nao can index
-2. **Chain carefully**: Luu y attrs khong duoc truyen qua tat ca operators
-3. **Custom suffixes**: Dung unique suffix khi chain nhieu sem_map calls
-4. **Filter truoc Join**: Giam N truoc khi chay O(M*N) join
-5. **Partition truoc Agg**: Dung sem_partition_by de cai thien chat luong aggregation
+1. **Index sớm**: Gọi `sem_index()` đầu pipeline, trước bất kỳ operator nào cần index
+2. **Chain carefully**: Lưu ý attrs không được truyền qua tất cả operators
+3. **Custom suffixes**: Dùng unique suffix khi chain nhiều sem_map calls
+4. **Filter trước Join**: Giảm N trước khi chạy O(M*N) join
+5. **Partition trước Agg**: Dùng sem_partition_by để cải thiện chất lượng aggregation

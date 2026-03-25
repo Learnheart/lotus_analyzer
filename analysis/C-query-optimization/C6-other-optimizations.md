@@ -1,9 +1,9 @@
-# C6 - Cac Optimization khac trong LOTUS
+# C6 - Các Optimization khác trong LOTUS
 
-## 1. safe_mode — Uoc luong Chi phi truoc khi Thuc thi
+## 1. safe_mode — Ước lượng Chi phí trước khi Thực thi
 
-### Muc dich
-Cho phep user xem uoc luong token/cost truoc khi chay operator, tranh bat ngo ve chi phi.
+### Mục đích
+Cho phép user xem ước lượng token/cost trước khi chạy operator, tránh bất ngờ về chi phí.
 
 ### Implementation
 
@@ -50,7 +50,7 @@ if safe_mode:
     show_safe_mode(estimated_cost, estimated_LM_calls)
 ```
 
-**KHONG duoc implement:**
+**KHÔNG được implement:**
 - `sem_agg` — `sem_agg.py:152-153`: `"Safe mode is not implemented yet"`
 - `sem_join` cascade — `sem_join.py:262-264`: `"Safe mode is not implemented yet"`
 
@@ -58,10 +58,10 @@ if safe_mode:
 
 ## 2. Embedding-Based Pivot Selection trong Quicksort
 
-### Vi tri
-`sem_topk.py:411-417` trong ham `partition`.
+### Vị trí
+`sem_topk.py:411-417` trong hàm `partition`.
 
-### Cach hoat dong
+### Cách hoạt động
 ```python
 if embedding:
     if K <= high - low:
@@ -73,14 +73,14 @@ else:
     pivot_index = np.random.randint(low, high + 1)
 ```
 
-**Giai thich:**
-- Khi `embedding=True` (method "quick-sem"), DataFrame da duoc pre-sorted theo embedding similarity — `sem_topk.py:782-788`
-- `indexes` la mapping tu sorted position ve original index
-- `heapq.nsmallest(K, indexes)` chon item co index nho nhat (= ranking cao nhat theo embedding)
-- Dung item nay lam pivot → partition se chia data gan dung tai vi tri K
-- Giam so recursive calls can thiet
+**Giải thích:**
+- Khi `embedding=True` (method "quick-sem"), DataFrame đã được pre-sorted theo embedding similarity — `sem_topk.py:782-788`
+- `indexes` là mapping từ sorted position về original index
+- `heapq.nsmallest(K, indexes)` chọn item có index nhỏ nhất (= ranking cao nhất theo embedding)
+- Dùng item này làm pivot → partition sẽ chia data gần đúng tại vị trí K
+- Giảm số recursive calls cần thiết
 
-**Kich hoat:** `df.sem_topk("...", K=5, method="quick-sem")` — `sem_topk.py:782-788`
+**Kích hoạt:** `df.sem_topk("...", K=5, method="quick-sem")` — `sem_topk.py:782-788`
 
 Pre-sorting:
 ```python
@@ -96,24 +96,24 @@ if method == "quick-sem":
 
 ## 3. Post-filtering trong sem_search
 
-### Vi tri
+### Vị trí
 `sem_search.py:127-138`
 
-### Van de
-Khi DataFrame da duoc filter (chi con mot subset cua rows), vector index van chua tat ca rows goc.
-Vector search co the tra ve rows da bi filter ra.
+### Vấn đề
+Khi DataFrame đã được filter (chỉ còn một subset của rows), vector index vẫn chứa tất cả rows gốc.
+Vector search có thể trả về rows đã bị filter ra.
 
-### Giai phap
+### Giải pháp
 ```python
 # sem_search.py:116-138
-df_idxs = self._obj.index  # Cac index hien tai cua DataFrame
+df_idxs = self._obj.index  # Các index hiện tại của DataFrame
 search_K = K
 while True:
     vs_output = vs(query_vectors, search_K)
     doc_idxs = vs_output.indices[0]
     scores = vs_output.distances[0]
 
-    # Post-filter: chi giu cac results co trong DataFrame hien tai
+    # Post-filter: chỉ giữ các results có trong DataFrame hiện tại
     postfiltered_doc_idxs = []
     postfiltered_scores = []
     for idx, score in zip(doc_idxs, scores):
@@ -125,15 +125,15 @@ while True:
     postfiltered_scores = postfiltered_scores[:K]
     if len(postfiltered_doc_idxs) == K:
         break
-    search_K = search_K * 2  # Tang K va thu lai
+    search_K = search_K * 2  # Tăng K và thử lại
 ```
 
-**Key insight:** Neu khong du K results sau post-filter, tang `search_K` gap doi va chay lai.
-Day la cach don gian de dam bao luon tra ve du K results tu filtered DataFrame.
+**Key insight:** Nếu không đủ K results sau post-filter, tăng `search_K` gấp đôi và chạy lại.
+Đây là cách đơn giản để đảm bảo luôn trả về đủ K results từ filtered DataFrame.
 
 ---
 
-## 4. Parallel GroupBy trong sem_agg va sem_topk
+## 4. Parallel GroupBy trong sem_agg và sem_topk
 
 ### sem_agg — `sem_agg.py:381-399`
 ```python
@@ -157,22 +157,22 @@ if group_by:
         results = list(executor.map(SemTopKDataframe.process_group, group_args))
 ```
 
-**Cau hinh:** `settings.py:23` — `parallel_groupby_max_threads: int = 8`
+**Cấu hình:** `settings.py:23` — `parallel_groupby_max_threads: int = 8`
 
-**Luu y:**
-- Python GIL gioi han CPU parallelism, nhung LLM calls la I/O-bound nen threads van hieu qua
-- Moi group chay doc lap voi model rieng cua no
-- Ket qua duoc `pd.concat` lai — `sem_agg.py:399`, `sem_topk.py:776-780`
+**Lưu ý:**
+- Python GIL giới hạn CPU parallelism, nhưng LLM calls là I/O-bound nên threads vẫn hiệu quả
+- Mỗi group chạy độc lập với model riêng của nó
+- Kết quả được `pd.concat` lại — `sem_agg.py:399`, `sem_topk.py:776-780`
 
 ---
 
 ## 5. Hierarchical Aggregation Tree
 
-### Vi tri
+### Vị trí
 `sem_agg.py:60-223`
 
-### Cach hoat dong
-Khi co nhieu documents hon context window cua model, sem_agg xay dung cay aggregation:
+### Cách hoạt động
+Khi có nhiều documents hơn context window của model, sem_agg xây dựng cây aggregation:
 
 ```
 Level 0 (Leaf):    [doc1, doc2, doc3] → summary_A    [doc4, doc5, doc6] → summary_B
@@ -186,29 +186,29 @@ if (new_tokens + context_tokens + template_tokens > model.max_ctx_len - model.ma
     # Close current prompt, start new one
 ```
 
-**Template khac nhau cho moi level:**
+**Template khác nhau cho mỗi level:**
 - Leaf template — `sem_agg.py:12-31`: "given the context below from multiple documents"
 - Node template — `sem_agg.py:34-57`: "given the context below from multiple sources"
 
-**Partition-aware:** Documents co cung `partition_id` se duoc aggregation voi nhau truoc — `sem_agg.py:179-184`.
+**Partition-aware:** Documents có cùng `partition_id` sẽ được aggregation với nhau trước — `sem_agg.py:179-184`.
 
 ---
 
 ## 6. Long Context Strategy cho Aggregation
 
-### Vi tri
-`long_context_strategy.py:1-50`, su dung trong `sem_agg.py:411-428`
+### Vị trí
+`long_context_strategy.py:1-50`, sử dụng trong `sem_agg.py:411-428`
 
 ### Hai strategies
 
-**TRUNCATE:** Cat documents khi qua dai — don gian nhung mat thong tin.
+**TRUNCATE:** Cắt documents khi quá dài — đơn giản nhưng mất thông tin.
 
-**CHUNK:** Chia document lon thanh cac chunks nho hon — `long_context_strategy.py:22-50`
-- `ChunkedDocument` dataclass luu tru chunks + metadata
-- `chunk_info` ghi lai original row index va chunk index — `long_context_strategy.py:12-18`
-- Cho phep khoi phuc lai row goc sau khi xu ly
+**CHUNK:** Chia document lớn thành các chunks nhỏ hơn — `long_context_strategy.py:22-50`
+- `ChunkedDocument` dataclass lưu trữ chunks + metadata
+- `chunk_info` ghi lại original row index và chunk index — `long_context_strategy.py:12-18`
+- Cho phép khôi phục lại row gốc sau khi xử lý
 
-### Su dung
+### Sử dụng
 ```python
 # sem_agg.py:418-419
 docs_input = create_chunked_documents(
@@ -221,8 +221,8 @@ Default: `LongContextStrategy.CHUNK` — `sem_agg.py:362`
 
 ## 7. Usage Limits
 
-### Vi tri
-`types.py:215-220` va `lm.py:419-427`
+### Vị trí
+`types.py:215-220` và `lm.py:419-427`
 
 ```python
 @dataclass
@@ -233,7 +233,7 @@ class UsageLimit:
     total_cost_limit: float = float("inf")
 ```
 
-### Cach hoat dong
+### Cách hoạt động
 ```python
 # lm.py:419-427
 def _check_usage_limit(self, usage, limit, usage_type):
@@ -244,20 +244,20 @@ def _check_usage_limit(self, usage, limit, usage_type):
         raise LotusUsageLimitException(...)
 ```
 
-- Kiem tra sau moi response — `lm.py:478`, `lm.py:483`
-- Co ca `physical_usage_limit` va `virtual_usage_limit` — `lm.py:78-79`
-- Raise `LotusUsageLimitException` khi vuot limit — `types.py:232-234`
+- Kiểm tra sau mỗi response — `lm.py:478`, `lm.py:483`
+- Có cả `physical_usage_limit` và `virtual_usage_limit` — `lm.py:78-79`
+- Raise `LotusUsageLimitException` khi vượt limit — `types.py:232-234`
 
 ---
 
-## 8. Tom tat
+## 8. Tóm tắt
 
-| Optimization | Muc dich | Vi tri | Trang thai |
+| Optimization | Mục đích | Vị trí | Trạng thái |
 |-------------|---------|--------|-----------|
-| safe_mode | Uoc luong chi phi | Nhieu operators | Mot phan (chua day du) |
-| Embedding pivot | Giam LLM calls trong quicksort | sem_topk.py:411-417 | Hoan chinh |
-| Post-filtering | Xu ly filtered DataFrames | sem_search.py:127-138 | Hoan chinh |
-| Parallel groupby | Tang throughput | sem_agg.py:396, sem_topk.py:772 | Hoan chinh |
-| Hierarchical aggregation | Xu ly data lon hon context window | sem_agg.py:164-219 | Hoan chinh |
-| Long context strategy | Xu ly documents qua dai | long_context_strategy.py | Hoan chinh |
-| Usage limits | Tranh chi phi qua cao | lm.py:419-427 | Hoan chinh |
+| safe_mode | Ước lượng chi phí | Nhiều operators | Một phần (chưa đầy đủ) |
+| Embedding pivot | Giảm LLM calls trong quicksort | sem_topk.py:411-417 | Hoàn chỉnh |
+| Post-filtering | Xử lý filtered DataFrames | sem_search.py:127-138 | Hoàn chỉnh |
+| Parallel groupby | Tăng throughput | sem_agg.py:396, sem_topk.py:772 | Hoàn chỉnh |
+| Hierarchical aggregation | Xử lý data lớn hơn context window | sem_agg.py:164-219 | Hoàn chỉnh |
+| Long context strategy | Xử lý documents quá dài | long_context_strategy.py | Hoàn chỉnh |
+| Usage limits | Tránh chi phí quá cao | lm.py:419-427 | Hoàn chỉnh |

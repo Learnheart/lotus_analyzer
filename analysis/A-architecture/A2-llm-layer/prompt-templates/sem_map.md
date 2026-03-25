@@ -2,7 +2,7 @@
 
 ## Formatter Function
 
-`map_formatter` tai `task_instructions.py:213`:
+`map_formatter` tại `task_instructions.py:213`:
 
 ```python
 def map_formatter(
@@ -36,13 +36,13 @@ Your job is to answer the user's instruction given the context.
 
 ### Custom system_prompt
 
-User co the truyen `system_prompt` parameter de override hoan toan system instruction.
+User có thể truyền `system_prompt` parameter để override hoàn toàn system instruction.
 
 ## 3 Sub-formatters
 
 ### 1. map_formatter (default) - task_instructions.py:213
 
-Khi khong co CoT va khong co cot_reasoning:
+Khi không có CoT và không có cot_reasoning:
 
 ```python
 messages = [
@@ -61,7 +61,7 @@ messages.append(user_message_formatter(multimodal_data, f"Instruction: {user_ins
 
 ### 2. map_formatter_cot - task_instructions.py:160
 
-Khi `cot_reasoning` duoc cung cap:
+Khi `cot_reasoning` được cung cấp:
 
 System prompt (task_instructions.py:168-172):
 ```
@@ -107,9 +107,9 @@ Khi `strategy == ReasoningStrategy.ZS_COT and model.is_deepseek()`:
 user_intructions = f"Instruction: {user_instruction}\n\n{deepseek_cot_formatter()}"
 ```
 
-Them deepseek-specific CoT instructions vao cuoi user message.
+Thêm deepseek-specific CoT instructions vào cuối user message.
 
-## Full Message Structure (default, voi 1 example)
+## Full Message Structure (default, với 1 example)
 
 ```python
 messages = [
@@ -122,7 +122,7 @@ messages = [
 
 ## Postprocessing
 
-`map_postprocess` tai `postprocessors.py:123`:
+`map_postprocess` tại `postprocessors.py:123`:
 
 ```python
 def map_postprocess(llm_answers, model, cot_reasoning=False):
@@ -135,16 +135,16 @@ def map_postprocess(llm_answers, model, cot_reasoning=False):
     return SemanticMapPostprocessOutput(raw_outputs=llm_answers, outputs=outputs, explanations=explanations)
 ```
 
-- **Khong co CoT**: Output la raw LLM answer, khong postprocess
-- **Voi CoT**: Tach reasoning va answer qua `cot_postprocessor` (postprocessors.py:12)
-- **DeepSeek**: Dung `deepseek_cot_postprocessor` (postprocessors.py:46) de parse `<think>` tags
+- **Không có CoT**: Output là raw LLM answer, không postprocess
+- **Với CoT**: Tách reasoning và answer qua `cot_postprocessor` (postprocessors.py:12)
+- **DeepSeek**: Dùng `deepseek_cot_postprocessor` (postprocessors.py:46) để parse `<think>` tags
 
-## Phan tich
+## Phân tích
 
-1. **Flexible output**: Khac voi `sem_filter` (chi True/False), `sem_map` cho phep LLM tra ve bat ky text nao. Khong co strict output format.
+1. **Flexible output**: Khác với `sem_filter` (chỉ True/False), `sem_map` cho phép LLM trả về bất kỳ text nào. Không có strict output format.
 
-2. **Custom system_prompt**: User co the override system prompt de tuy chinh hanh vi LLM, vi du: su dung cho `llm_as_judge` voi system prompt "You are an intelligent, rigorous, and fair evaluator." (llm_as_judge.py:70-73).
+2. **Custom system_prompt**: User có thể override system prompt để tùy chỉnh hành vi LLM, ví dụ: sử dụng cho `llm_as_judge` với system prompt "You are an intelligent, rigorous, and fair evaluator." (llm_as_judge.py:70-73).
 
-3. **Postprocessor pluggable**: `sem_map` (sem_map.py:219) va `sem_extract` (sem_extract.py:207) cho phep truyen custom postprocessor function.
+3. **Postprocessor pluggable**: `sem_map` (sem_map.py:219) và `sem_extract` (sem_extract.py:207) cho phép truyền custom postprocessor function.
 
-4. **Luu y loi typo**: Tai task_instructions.py:250 co `user_intructions` (thieu 's' -> `instructions`). Khong anh huong functionality nhung cho thay code co the chua bugs nho.
+4. **Lưu ý lỗi typo**: Tại task_instructions.py:250 có `user_intructions` (thiếu 's' -> `instructions`). Không ảnh hưởng functionality nhưng cho thấy code có thể chứa bugs nhỏ.

@@ -1,10 +1,10 @@
 # Prompt Template: sem_join
 
-## Su dung lai filter_formatter
+## Sử dụng lại filter_formatter
 
-`sem_join` KHONG co prompt template rieng. No reuse `filter_formatter` tu `task_instructions.py:87`, giong het voi `sem_filter`.
+`sem_join` KHÔNG có prompt template riêng. Nó reuse `filter_formatter` từ `task_instructions.py:87`, giống hệt với `sem_filter`.
 
-## Cach hoat dong
+## Cách hoạt động
 
 ### sem_join function (sem_join.py:16)
 
@@ -28,7 +28,7 @@ def sem_join(l1, l2, ids1, ids2, col1_label, col2_label, model, user_instruction
 
 ### merge_multimodal_info (task_instructions.py:382)
 
-Ket hop 2 multimodal dicts thanh 1:
+Kết hợp 2 multimodal dicts thành 1:
 ```python
 {
     "text": f"{first[i]['text']}\n{second[j]['text']}",
@@ -36,7 +36,7 @@ Ket hop 2 multimodal dicts thanh 1:
 }
 ```
 
-### Ket qua prompt cho moi cap (left_row, right_row)
+### Kết quả prompt cho mỗi cặp (left_row, right_row)
 
 ```
 Context:
@@ -46,7 +46,7 @@ Context:
 Claim: the Article belongs to the Category
 ```
 
-Day la chinh xac cung prompt format nhu `sem_filter`, nhung context chua du lieu tu CA 2 DataFrames.
+Đây là chính xác cùng prompt format như `sem_filter`, nhưng context chứa dữ liệu từ CẢ 2 DataFrames.
 
 ## Safe mode estimation (sem_join.py:104-120)
 
@@ -62,16 +62,16 @@ if safe_mode:
     estimated_total_cost = estimated_tokens_per_call * estimated_total_calls
 ```
 
-Join co so LLM calls = `len(left) * len(right)` (cross product), co the rat lon.
+Join có số LLM calls = `len(left) * len(right)` (cross product), có thể rất lớn.
 
 ## Join Cascade
 
-Khi `cascade_args` duoc cung cap, join su dung `sem_sim_join` de lam proxy model va chi gui low-confidence pairs den LLM (sem_join.py:746-773). Xem `sem_join.py:417` (`join_optimizer`) de hieu chi tiet.
+Khi `cascade_args` được cung cấp, join sử dụng `sem_sim_join` để làm proxy model và chỉ gửi low-confidence pairs đến LLM (sem_join.py:746-773). Xem `sem_join.py:417` (`join_optimizer`) để hiểu chi tiết.
 
-## Phan tich
+## Phân tích
 
-1. **Reuse pattern**: Thay vi viet prompt rieng, `sem_join` convert bai toan join thanh bai toan filter bang cach merge context tu 2 DataFrames.
+1. **Reuse pattern**: Thay vì viết prompt riêng, `sem_join` convert bài toán join thành bài toán filter bằng cách merge context từ 2 DataFrames.
 
-2. **Cross product cost**: O(n*m) LLM calls. Cascade giup giam so calls bang cach dung embedding similarity de loc truoc.
+2. **Cross product cost**: O(n*m) LLM calls. Cascade giúp giảm số calls bằng cách dùng embedding similarity để lọc trước.
 
-3. **Column disambiguation**: `:left` va `:right` suffixes cho phep user chi dinh column nao thuoc DataFrame nao khi 2 DataFrames co cung column name (sem_join.py:703-707).
+3. **Column disambiguation**: `:left` và `:right` suffixes cho phép user chỉ định column nào thuộc DataFrame nào khi 2 DataFrames có cùng column name (sem_join.py:703-707).

@@ -1,8 +1,8 @@
 # Prompt Templates - Master Index
 
-## Tong quan
+## Tổng quan
 
-LOTUS su dung prompt templates duoc dinh nghia trong `templates/task_instructions.py` va trong tung operator file. Moi operator co system prompt va user prompt rieng, duoc format boi cac formatter functions.
+LOTUS sử dụng prompt templates được định nghĩa trong `templates/task_instructions.py` và trong từng operator file. Mỗi operator có system prompt và user prompt riêng, được format bởi các formatter functions.
 
 ## Master Table
 
@@ -21,7 +21,7 @@ LOTUS su dung prompt templates duoc dinh nghia trong `templates/task_instruction
 
 ## Reasoning Strategies
 
-Dinh nghia tai `types.py:241-245`:
+Định nghĩa tại `types.py:241-245`:
 ```python
 class ReasoningStrategy(Enum):
     DEFAULT = auto()
@@ -54,9 +54,9 @@ def deepseek_cot_formatter():
     final answer after the </think> tag with the format: Answer: your answer."""
 ```
 
-## Noi dung chi tiet
+## Nội dung chi tiết
 
-Xem cac file rieng trong thu muc nay:
+Xem các file riêng trong thư mục này:
 - `sem_filter.md` - Filter prompt template
 - `sem_map.md` - Map prompt template
 - `sem_join.md` - Join prompt template (reuses filter)

@@ -2,9 +2,9 @@
 
 ## Batching trong LM
 
-### Default batching (khong co rate/tpm limit)
+### Default batching (không có rate/tpm limit)
 
-Khi khong co `rate_limit` hay `tpm_limit`, LM gui tat ca messages cung luc qua `batch_completion` (lm.py:250-251):
+Khi không có `rate_limit` hay `tpm_limit`, LM gửi tất cả messages cùng lúc qua `batch_completion` (lm.py:250-251):
 
 ```python
 uncached_responses = batch_completion(
@@ -13,10 +13,10 @@ uncached_responses = batch_completion(
 ```
 
 - `max_workers=self.max_batch_size`: default 64 (lm.py:73)
-- `batch` la list cua tat ca uncached messages
-- litellm noi bo su dung ThreadPoolExecutor voi `max_workers` threads
+- `batch` là list của tất cả uncached messages
+- litellm nội bộ sử dụng ThreadPoolExecutor với `max_workers` threads
 
-### max_batch_size default va interaction voi rate_limit (lm.py:105-112)
+### max_batch_size default và interaction với rate_limit (lm.py:105-112)
 
 ```python
 if rate_limit is not None:
@@ -29,7 +29,7 @@ else:
     self.max_batch_size = max_batch_size
 ```
 
-Khi `rate_limit` duoc set, `max_batch_size` bi cap lai de khong vuot qua RPM limit.
+Khi `rate_limit` được set, `max_batch_size` bị cap lại để không vượt quá RPM limit.
 
 ## Rate Limiting: _process_with_rate_limiting (lm.py:258)
 
@@ -39,17 +39,17 @@ def _process_with_rate_limiting(
 ) -> list[ModelResponse]:
 ```
 
-Thuat toan:
-1. Chia `batch` thanh sub-batches co kich thuoc `max_batch_size`
-2. Voi moi sub-batch:
-   - Gui `batch_completion()` (lm.py:286-288)
-   - Tinh thoi gian can thiet theo RPM: `required_time = len(sub_batch) * (60 / rate_limit)` (lm.py:296)
-   - Neu batch chay nhanh hon `required_time`, `sleep()` phan thoi gian con lai (lm.py:300-302)
-   - Khong sleep sau batch cuoi cung (lm.py:299)
+Thuật toán:
+1. Chia `batch` thành sub-batches có kích thước `max_batch_size`
+2. Với mỗi sub-batch:
+   - Gửi `batch_completion()` (lm.py:286-288)
+   - Tính thời gian cần thiết theo RPM: `required_time = len(sub_batch) * (60 / rate_limit)` (lm.py:296)
+   - Nếu batch chạy nhanh hơn `required_time`, `sleep()` phần thời gian còn lại (lm.py:300-302)
+   - Không sleep sau batch cuối cùng (lm.py:299)
 
-Vi du: `rate_limit=100`, `max_batch_size=64`
+Ví dụ: `rate_limit=100`, `max_batch_size=64`
 - 200 messages -> 4 sub-batches (64, 64, 64, 8)
-- Moi sub-batch phai mat it nhat `64 * 0.6s = 38.4s`
+- Mỗi sub-batch phải mất ít nhất `64 * 0.6s = 38.4s`
 
 ## TPM Limiting: _process_with_tpm_limiting (lm.py:311)
 
@@ -59,14 +59,14 @@ def _process_with_tpm_limiting(
 ) -> list[ModelResponse]:
 ```
 
-Day la co che phuc tap hon, theo doi token usage trong sliding window 1 phut.
+Đây là cơ chế phức tạp hơn, theo dõi token usage trong sliding window 1 phút.
 
-### Thuat toan chi tiet:
+### Thuật toán chi tiết:
 
-1. **Uoc tinh tokens** (lm.py:319-330):
-   - Moi message duoc uoc tinh: `est = count_tokens(msg) + max_tokens`
-   - Kiem tra moi message khong vuot qua 95% TPM limit
-   - Neu vuot -> raise `ValueError` (lm.py:324-329)
+1. **Ước tính tokens** (lm.py:319-330):
+   - Mỗi message được ước tính: `est = count_tokens(msg) + max_tokens`
+   - Kiểm tra mỗi message không vượt quá 95% TPM limit
+   - Nếu vượt -> raise `ValueError` (lm.py:324-329)
 
 2. **Sliding window tracking** (lm.py:305-309):
    ```python
@@ -76,12 +76,12 @@ Day la co che phuc tap hon, theo doi token usage trong sliding window 1 phut.
            self._token_usage_history.popleft()
        return sum(tokens for _, tokens in self._token_usage_history)
    ```
-   Su dung `deque` (lm.py:103) de luu (timestamp, tokens) tuples. Xoa entries cu hon 60s.
+   Sử dụng `deque` (lm.py:103) để lưu (timestamp, tokens) tuples. Xóa entries cũ hơn 60s.
 
 3. **Build sub-batch** (lm.py:339-358):
-   - Tinh `available_tokens = 0.95 * tpm_limit - tokens_used_in_last_minute`
-   - Them messages vao sub-batch cho den khi het budget hoac dat `effective_max_batch`
-   - Neu khong them duoc message nao (token budget = 0), wait cho window clear (lm.py:381-388)
+   - Tính `available_tokens = 0.95 * tpm_limit - tokens_used_in_last_minute`
+   - Thêm messages vào sub-batch cho đến khi hết budget hoặc đạt `effective_max_batch`
+   - Nếu không thêm được message nào (token budget = 0), wait cho window clear (lm.py:381-388)
 
 4. **Record actual usage** (lm.py:368-369):
    ```python
@@ -90,7 +90,7 @@ Day la co che phuc tap hon, theo doi token usage trong sliding window 1 phut.
    ```
 
 5. **Combined RPM+TPM** (lm.py:374-379):
-   Neu ca `rate_limit` va `tpm_limit` deu duoc set, sau moi sub-batch con enforce RPM delay.
+   Nếu cả `rate_limit` và `tpm_limit` đều được set, sau mỗi sub-batch còn enforce RPM delay.
 
 ### Safety buffer: 5% (lm.py:317, lm.py:336)
 ```python
@@ -99,7 +99,7 @@ max_allowed_tpm = int(self.tpm_limit * 0.95)
 
 ## Progress Bar
 
-Tat ca processing methods su dung `tqdm` progress bar (lm.py:236-241):
+Tất cả processing methods sử dụng `tqdm` progress bar (lm.py:236-241):
 
 ```python
 pbar = tqdm(
@@ -111,13 +111,13 @@ pbar = tqdm(
 ```
 
 - Default `show_progress_bar=True`
-- TPM limiting hien thi trang thai wait: `pbar.set_postfix_str(f"TPM Limit reached, waiting {wait_time:.1f}s")` (lm.py:386)
+- TPM limiting hiển thị trạng thái wait: `pbar.set_postfix_str(f"TPM Limit reached, waiting {wait_time:.1f}s")` (lm.py:386)
 
 ## Concurrency trong Operators
 
 ### Group-by parallelism
 
-`sem_agg` (sem_agg.py:396-399) va `sem_topk` (sem_topk.py:770-773) su dung `ThreadPoolExecutor` cho group_by:
+`sem_agg` (sem_agg.py:396-399) và `sem_topk` (sem_topk.py:770-773) sử dụng `ThreadPoolExecutor` cho group_by:
 
 ```python
 from concurrent.futures import ThreadPoolExecutor
@@ -126,7 +126,7 @@ with ThreadPoolExecutor(max_workers=lotus.settings.parallel_groupby_max_threads)
 ```
 
 - Default 8 threads (settings.py:23)
-- Moi group chay `sem_agg`/`sem_topk` doc lap
+- Mỗi group chạy `sem_agg`/`sem_topk` độc lập
 
 ### llm_as_judge parallelism (llm_as_judge.py:83-103)
 
@@ -140,5 +140,5 @@ with ThreadPoolExecutor(max_workers=lotus.settings.parallel_groupby_max_threads)
     )
 ```
 
-- Chay n_trials `sem_map` calls song song
-- Luu y: `lotus.settings.enable_cache = False` truoc khi chay (llm_as_judge.py:82)
+- Chạy n_trials `sem_map` calls song song
+- Lưu ý: `lotus.settings.enable_cache = False` trước khi chạy (llm_as_judge.py:82)
