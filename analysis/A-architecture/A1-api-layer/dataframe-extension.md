@@ -1,43 +1,43 @@
 # A1 - DataFrame Extension Pattern
 
-## Mo hinh mo rong pandas DataFrame
+## Mô hình mở rộng pandas DataFrame
 
-LOTUS su dung co che `@pd.api.extensions.register_dataframe_accessor` cua pandas de them cac semantic operator vao DataFrame. Day la pattern chinh thuc cua pandas cho phep "plugin" method moi ma khong can subclass DataFrame.
+LOTUS sử dụng cơ chế `@pd.api.extensions.register_dataframe_accessor` của pandas để thêm các semantic operator vào DataFrame. Đây là pattern chính thức của pandas cho phép "plugin" method mới mà không cần subclass DataFrame.
 
-## Pattern chi tiet
+## Pattern chi tiết
 
-Moi accessor class co cau truc giong nhau:
+Mỗi accessor class có cấu trúc giống nhau:
 
 ```python
 @pd.api.extensions.register_dataframe_accessor("sem_filter")
 class SemFilterDataframe:
-    def __init__(self, pandas_obj):    # pandas truyen DataFrame vao day
+    def __init__(self, pandas_obj):    # pandas truyền DataFrame vào đây
         self._validate(pandas_obj)
-        self._obj = pandas_obj         # luu tham chieu den DataFrame goc
+        self._obj = pandas_obj         # lưu tham chiếu đến DataFrame gốc
 
     @staticmethod
     def _validate(obj):
         if not isinstance(obj, pd.DataFrame):
             raise AttributeError("Must be a DataFrame")
 
-    @operator_cache                    # cache ket qua operator
+    @operator_cache                    # cache kết quả operator
     def __call__(self, user_instruction, ...):
-        # Logic chinh cua operator
+        # Logic chính của operator
         ...
 ```
 
-### Cach hoat dong:
+### Cách hoạt động:
 
-1. Khi user goi `df.sem_filter(...)`, pandas tao instance `SemFilterDataframe(df)` va goi `__call__()` tren instance do.
-2. `self._obj` luu tham chieu den DataFrame goc, cho phep truy cap du lieu.
-3. `@operator_cache` decorator (cache.py:33) wrap `__call__`, hash `self._obj` + arguments de cache ket qua.
-4. Vi du cu the: `SemFilterDataframe` tai `sem_filter.py:225-226`:
+1. Khi user gọi `df.sem_filter(...)`, pandas tạo instance `SemFilterDataframe(df)` và gọi `__call__()` trên instance đó.
+2. `self._obj` lưu tham chiếu đến DataFrame gốc, cho phép truy cập dữ liệu.
+3. `@operator_cache` decorator (cache.py:33) wrap `__call__`, hash `self._obj` + arguments để cache kết quả.
+4. Ví dụ cụ thể: `SemFilterDataframe` tại `sem_filter.py:225-226`:
    ```python
    @pd.api.extensions.register_dataframe_accessor("sem_filter")
    class SemFilterDataframe:
    ```
 
-## Danh sach tat ca Accessors
+## Danh sách tất cả Accessors
 
 | Accessor Name | Class | File:Line | Category |
 |---|---|---|---|
@@ -57,32 +57,32 @@ class SemFilterDataframe:
 | `sem_partition_by` | `SemPartitionByDataframe` | `sem_ops/sem_partition_by.py:8-9` | Utility |
 | `sem_cluster_by` | `SemClusterByDataframe` | `sem_ops/sem_cluster_by.py:10-11` | Utility |
 
-## So sanh cac loai accessor
+## So sánh các loại accessor
 
 ### LLM operators
-- Su dung `lotus.settings.lm` (LM instance)
-- Goi `filter_formatter`, `map_formatter`, `extract_formatter` de tao prompt
-- Goi `LM.__call__()` de batch completion
-- Co postprocessor de parse output
+- Sử dụng `lotus.settings.lm` (LM instance)
+- Gọi `filter_formatter`, `map_formatter`, `extract_formatter` để tạo prompt
+- Gọi `LM.__call__()` để batch completion
+- Có postprocessor để parse output
 
 ### Embedding operators
-- Su dung `lotus.settings.rm` (RM instance) va `lotus.settings.vs` (VS instance)
-- Truy cap `self._obj.attrs["index_dirs"]` de load vector index
-- Khong can LLM, chi dung embedding model
+- Sử dụng `lotus.settings.rm` (RM instance) và `lotus.settings.vs` (VS instance)
+- Truy cập `self._obj.attrs["index_dirs"]` để load vector index
+- Không cần LLM, chỉ dùng embedding model
 
-### Dac biet: `load_sem_index`
-- Khong co `@operator_cache` decorator (load_sem_index.py:49)
-- Chi don gian set `attrs["index_dirs"][col_name] = index_dir`
-- La accessor duy nhat khong can `lotus.settings.lm` hay `lotus.settings.rm`
+### Đặc biệt: `load_sem_index`
+- Không có `@operator_cache` decorator (load_sem_index.py:49)
+- Chỉ đơn giản set `attrs["index_dirs"][col_name] = index_dir`
+- Là accessor duy nhất không cần `lotus.settings.lm` hay `lotus.settings.rm`
 
-### Dac biet: `sem_partition_by`
-- Nhan mot `partition_fn: Callable` thay vi user_instruction (sem_partition_by.py:63)
-- Gan `_lotus_partition_id` column len DataFrame
-- Duoc su dung truoc `sem_agg` de nhom du lieu
+### Đặc biệt: `sem_partition_by`
+- Nhận một `partition_fn: Callable` thay vì user_instruction (sem_partition_by.py:63)
+- Gán `_lotus_partition_id` column lên DataFrame
+- Được sử dụng trước `sem_agg` để nhóm dữ liệu
 
 ## Validate pattern
 
-Hau het accessor deu validate input la DataFrame:
+Hầu hết accessor đều validate input là DataFrame:
 ```python
 @staticmethod
 def _validate(obj):
@@ -90,4 +90,4 @@ def _validate(obj):
         raise AttributeError("Must be a DataFrame")
 ```
 
-Ngoai tru `SemAggDataframe._validate` (sem_agg.py:312-323) va `SemTopKDataframe._validate` (sem_topk.py:694-705) co body rong (`pass`), khong thuc su validate.
+Ngoại trừ `SemAggDataframe._validate` (sem_agg.py:312-323) và `SemTopKDataframe._validate` (sem_topk.py:694-705) có body rỗng (`pass`), không thực sự validate.

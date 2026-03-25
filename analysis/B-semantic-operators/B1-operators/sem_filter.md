@@ -9,12 +9,12 @@
 
 ## 1. Purpose & Use Cases
 
-Loc cac row trong DataFrame dua tren dieu kien ngon ngu tu nhien. Moi row duoc danh gia True/False boi LLM.
+Lọc các row trong DataFrame dựa trên điều kiện ngôn ngữ tự nhiên. Mỗi row được đánh giá True/False bởi LLM.
 
 **Use cases:**
-- Loc sentiment: `df.sem_filter("The review {text} reflects a positive sentiment")`
-- Loc theo dieu kien phuc tap: `df.sem_filter("The {description} mentions a safety concern")`
-- Loc voi reasoning: dung `strategy=ReasoningStrategy.ZS_COT` de co giai thich
+- Lọc sentiment: `df.sem_filter("The review {text} reflects a positive sentiment")`
+- Lọc theo điều kiện phức tạp: `df.sem_filter("The {description} mentions a safety concern")`
+- Lọc với reasoning: dùng `strategy=ReasoningStrategy.ZS_COT` để có giải thích
 
 ## 2. Call Stack Trace
 
@@ -75,54 +75,54 @@ Claim: {user_instruction}
 
 - **Model**: `lotus.settings.lm` (sem_filter.py:351)
 - **Call**: `model(inputs, show_progress_bar=..., progress_bar_desc=..., **kwargs)` (sem_filter.py:112-114)
-- **Logprobs**: ho tro qua `logprobs=True` parameter (sem_filter.py:105)
+- **Logprobs**: hỗ trợ qua `logprobs=True` parameter (sem_filter.py:105)
 - **Postprocessing**: `filter_postprocess()` (postprocessors.py:182-218)
-  - Tim "True" hoac "False" trong output (postprocessors.py:205-210)
-  - Default value neu parse that bai (postprocessors.py:202-211)
-  - Ho tro CoT postprocessor cho DeepSeek (postprocessors.py:46-93)
+  - Tìm "True" hoặc "False" trong output (postprocessors.py:205-210)
+  - Default value nếu parse thất bại (postprocessors.py:202-211)
+  - Hỗ trợ CoT postprocessor cho DeepSeek (postprocessors.py:46-93)
 
 ## 5. Optimization
 
-| Feature | Status | Chi tiet |
+| Feature | Status | Chi tiết |
 |---|---|---|
-| Batching | Yes | Toan bo inputs gui 1 lan qua `model(inputs)` (sem_filter.py:112-114) |
+| Batching | Yes | Toàn bộ inputs gửi 1 lần qua `model(inputs)` (sem_filter.py:112-114) |
 | Caching | Yes | `@operator_cache` decorator (sem_filter.py:333) |
-| Cascading | Yes | 2 proxy models: HELPER_LM (sem_filter.py:407) va EMBEDDING_MODEL (sem_filter.py:435) |
+| Cascading | Yes | 2 proxy models: HELPER_LM (sem_filter.py:407) và EMBEDDING_MODEL (sem_filter.py:435) |
 | Early-termination | No | |
 | Sampling | Yes | `importance_sampling()` cho cascade threshold learning (sem_filter.py:443) |
-| Safe mode | Yes | Uoc tinh cost truoc khi chay (sem_filter.py:107-110) |
+| Safe mode | Yes | Ước tính cost trước khi chạy (sem_filter.py:107-110) |
 
-### Chi tiet Cascade:
-1. **HELPER_LM** (sem_filter.py:407-434): Dung `lotus.settings.helper_lm` chay truoc, lay logprobs. Calibrate qua `calibrate_llm_logprobs()` (cascade_utils.py:33-39).
-2. **EMBEDDING_MODEL** (sem_filter.py:435-441): Dung `sem_search` de lay similarity scores lam proxy.
-3. **Threshold learning** (sem_filter.py:132-222): `learn_filter_cascade_thresholds()` chay oracle LLM tren sample, dung `learn_cascade_thresholds()` (cascade_utils.py:42-144) tim optimal (pos_threshold, neg_threshold).
-4. **Routing**: High confidence → dung proxy result (sem_filter.py:475-485). Low confidence → gui den oracle LLM (sem_filter.py:507-527).
+### Chi tiết Cascade:
+1. **HELPER_LM** (sem_filter.py:407-434): Dùng `lotus.settings.helper_lm` chạy trước, lấy logprobs. Calibrate qua `calibrate_llm_logprobs()` (cascade_utils.py:33-39).
+2. **EMBEDDING_MODEL** (sem_filter.py:435-441): Dùng `sem_search` để lấy similarity scores làm proxy.
+3. **Threshold learning** (sem_filter.py:132-222): `learn_filter_cascade_thresholds()` chạy oracle LLM trên sample, dùng `learn_cascade_thresholds()` (cascade_utils.py:42-144) tìm optimal (pos_threshold, neg_threshold).
+4. **Routing**: High confidence → dùng proxy result (sem_filter.py:475-485). Low confidence → gửi đến oracle LLM (sem_filter.py:507-527).
 
 ## 6. Input/Output Contract
 
 ### Input:
-- `user_instruction: str` — Langex expression voi `{column}` placeholders
-- `return_all: bool` — Neu True, tra ve tat ca rows voi column `filter_label` (sem_filter.py:565-578)
-- `default: bool` — Gia tri mac dinh khi parse that bai (sem_filter.py:340, default=True)
-- `examples: pd.DataFrame` — Phai co column "Answer" (sem_filter.py:375)
-- `cascade_args: CascadeArgs` — Yeu cau `recall_target`, `precision_target`, `failure_probability` (sem_filter.py:398-404)
+- `user_instruction: str` — Langex expression với `{column}` placeholders
+- `return_all: bool` — Nếu True, trả về tất cả rows với column `filter_label` (sem_filter.py:565-578)
+- `default: bool` — Giá trị mặc định khi parse thất bại (sem_filter.py:340, default=True)
+- `examples: pd.DataFrame` — Phải có column "Answer" (sem_filter.py:375)
+- `cascade_args: CascadeArgs` — Yêu cầu `recall_target`, `precision_target`, `failure_probability` (sem_filter.py:398-404)
 
 ### Output:
-- **return_all=False** (default): DataFrame chi giu rows co output=True (sem_filter.py:551-564)
-- **return_all=True**: DataFrame goc + column `filter_label` (bool) (sem_filter.py:576-578)
-- **return_explanations=True**: Them column `explanation_filter` (sem_filter.py:583-586)
-- **return_raw_outputs=True**: Them column `raw_output_filter` (sem_filter.py:584-588)
-- **return_stats=True**: Tra ve tuple (DataFrame, stats_dict) (sem_filter.py:590-591)
+- **return_all=False** (default): DataFrame chỉ giữ rows có output=True (sem_filter.py:551-564)
+- **return_all=True**: DataFrame gốc + column `filter_label` (bool) (sem_filter.py:576-578)
+- **return_explanations=True**: Thêm column `explanation_filter` (sem_filter.py:583-586)
+- **return_raw_outputs=True**: Thêm column `raw_output_filter` (sem_filter.py:584-588)
+- **return_stats=True**: Trả về tuple (DataFrame, stats_dict) (sem_filter.py:590-591)
 
 ## 7. Edge Cases
 
-1. **Column khong ton tai**: Raise `ValueError` (sem_filter.py:363-365)
-2. **LM chua configure**: Raise `ValueError` (sem_filter.py:351-354)
-3. **Parse that bai**: Dung `default` value (postprocessors.py:202-211)
-4. **Cascade voi CoT**: Raise `ValueError` — CoT khong ho tro cho helper models (sem_filter.py:411-412)
-5. **Helper LM chua set**: Raise `ValueError` khi dung ProxyModel.HELPER_LM (sem_filter.py:408-409)
-6. **RM chua set**: Raise `ValueError` khi dung ProxyModel.EMBEDDING_MODEL (sem_filter.py:436-437)
-7. **Column trung ten**: `get_out_col_name()` them suffix `_1`, `_2`... (sem_filter.py:567-574)
+1. **Column không tồn tại**: Raise `ValueError` (sem_filter.py:363-365)
+2. **LM chưa configure**: Raise `ValueError` (sem_filter.py:351-354)
+3. **Parse thất bại**: Dùng `default` value (postprocessors.py:202-211)
+4. **Cascade với CoT**: Raise `ValueError` — CoT không hỗ trợ cho helper models (sem_filter.py:411-412)
+5. **Helper LM chưa set**: Raise `ValueError` khi dùng ProxyModel.HELPER_LM (sem_filter.py:408-409)
+6. **RM chưa set**: Raise `ValueError` khi dùng ProxyModel.EMBEDDING_MODEL (sem_filter.py:436-437)
+7. **Column trùng tên**: `get_out_col_name()` thêm suffix `_1`, `_2`... (sem_filter.py:567-574)
 
 ## 8. Code Examples
 
@@ -130,7 +130,7 @@ Claim: {user_instruction}
 # Basic filter
 df.sem_filter("The {text} has positive sentiment")
 
-# Voi CoT reasoning
+# Với CoT reasoning
 df.sem_filter(
     "The {text} mentions safety issues",
     strategy=ReasoningStrategy.ZS_COT,
@@ -138,7 +138,7 @@ df.sem_filter(
     return_all=True
 )
 
-# Voi cascade
+# Với cascade
 from lotus.types import CascadeArgs, ProxyModel
 cascade = CascadeArgs(
     recall_target=0.9,
@@ -149,7 +149,7 @@ cascade = CascadeArgs(
 )
 df.sem_filter("The {text} is relevant", cascade_args=cascade)
 
-# Voi few-shot examples
+# Với few-shot examples
 examples = pd.DataFrame({
     "text": ["Great!", "Terrible"],
     "Answer": [True, False]
@@ -159,13 +159,13 @@ df.sem_filter("The {text} is positive", examples=examples)
 
 ## 9. Assessment
 
-### Diem manh:
-- **Cascade system** rat tinh vi: ho tro 2 proxy models, importance sampling, statistical threshold learning voi recall/precision targets
-- **Flexibility**: Ho tro few-shot, CoT, ZS-CoT, custom default values
+### Điểm mạnh:
+- **Cascade system** rất tinh vi: hỗ trợ 2 proxy models, importance sampling, statistical threshold learning với recall/precision targets
+- **Flexibility**: Hỗ trợ few-shot, CoT, ZS-CoT, custom default values
 - **Production-ready**: Safe mode, progress bars, stats tracking
 
-### Diem yeu:
-- **Cascade complexity**: Code cascade chiem >60% accessor (sem_filter.py:382-530), kho maintain
-- **Default=True**: Mac dinh la True khi parse that bai — co the dan den false positives
-- **Single column limitation**: Cascade voi EMBEDDING_MODEL chi dung `col_li[0]` (sem_filter.py:440) — TODO comment ghi nhan van de nay
-- **CoT + Cascade**: Khong tuong thich, bi raise error truc tiep (sem_filter.py:411-412)
+### Điểm yếu:
+- **Cascade complexity**: Code cascade chiếm >60% accessor (sem_filter.py:382-530), khó maintain
+- **Default=True**: Mặc định là True khi parse thất bại — có thể dẫn đến false positives
+- **Single column limitation**: Cascade với EMBEDDING_MODEL chỉ dùng `col_li[0]` (sem_filter.py:440) — TODO comment ghi nhận vấn đề này
+- **CoT + Cascade**: Không tương thích, bị raise error trực tiếp (sem_filter.py:411-412)

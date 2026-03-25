@@ -1,9 +1,9 @@
 # A0 - LOTUS Multi-Layer Architecture Overview
 
-## Tong quan kien truc (Architecture Overview)
+## Tổng quan kiến trúc (Architecture Overview)
 
-LOTUS duoc xay dung theo kien truc phan tang (layered architecture), moi tang co trach nhiem rieng biet.
-Du lieu chay tu tren xuong (user API -> template -> LLM/embedding -> data) va ket qua tra nguoc lai.
+LOTUS được xây dựng theo kiến trúc phân tầng (layered architecture), mỗi tầng có trách nhiệm riêng biệt.
+Dữ liệu chạy từ trên xuống (user API -> template -> LLM/embedding -> data) và kết quả trả ngược lại.
 
 ## ASCII Architecture Diagram
 
@@ -107,7 +107,7 @@ Du lieu chay tu tren xuong (user API -> template -> LLM/embedding -> data) va ke
 
 ## Data Flow: LLM-based Operator (e.g. sem_filter)
 
-Luong du lieu cho LLM operator di theo huong sau:
+Luồng dữ liệu cho LLM operator đi theo hướng sau:
 
 ```
 User call: df.sem_filter("the {title} is about AI")
@@ -156,7 +156,7 @@ User call: df.sem_search("title", "AI", K=2)
     |-- Return RMOutput(distances, indices)
     |
     v
-[4] Post-filter by df_idxs (chi giu rows con ton tai trong df)
+[4] Post-filter by df_idxs (chỉ giữ rows còn tồn tại trong df)
     |
     v
 [5] Optional reranking via lotus.settings.reranker
@@ -165,7 +165,7 @@ User call: df.sem_search("title", "AI", K=2)
 [6] Return filtered DataFrame with top-K rows
 ```
 
-## Quan he giua cac layer
+## Quan hệ giữa các layer
 
 | From Layer | To Layer | Mechanism | Key Interface |
 |---|---|---|---|
@@ -177,12 +177,12 @@ User call: df.sem_search("title", "AI", K=2)
 | Embedding -> Data | Return | `RMOutput.indices` -> DataFrame row selection |
 | Data -> API | `@pd.api.extensions.register_dataframe_accessor` | `self._obj` (pandas DataFrame) |
 
-## Nhan xet kien truc (Architecture Notes)
+## Nhận xét kiến trúc (Architecture Notes)
 
-1. **Decoupling qua litellm**: LM layer khong truc tiep goi OpenAI/Anthropic API ma thong qua `litellm.batch_completion` (lm.py:250), cho phep doi provider bang chuoi model string.
+1. **Decoupling qua litellm**: LM layer không trực tiếp gọi OpenAI/Anthropic API mà thông qua `litellm.batch_completion` (lm.py:250), cho phép đổi provider bằng chuỗi model string.
 
-2. **Singleton Settings**: `lotus.settings` (settings.py:35) la singleton global, tat ca operator truy cap `lotus.settings.lm`, `lotus.settings.rm` de lay model instance.
+2. **Singleton Settings**: `lotus.settings` (settings.py:35) là singleton global, tất cả operator truy cập `lotus.settings.lm`, `lotus.settings.rm` để lấy model instance.
 
-3. **Operator cache la cross-cutting concern**: `@operator_cache` decorator (cache.py:33) duoc ap dung tren `__call__` cua moi accessor, cache toan bo ket qua operator dua tren hash cua DataFrame + arguments.
+3. **Operator cache là cross-cutting concern**: `@operator_cache` decorator (cache.py:33) được áp dụng trên `__call__` của mỗi accessor, cache toàn bộ kết quả operator dựa trên hash của DataFrame + arguments.
 
-4. **Template layer tach biet**: Prompt formatting hoan toan nam trong `task_instructions.py`, giup thay doi prompt ma khong anh huong logic operator.
+4. **Template layer tách biệt**: Prompt formatting hoàn toàn nằm trong `task_instructions.py`, giúp thay đổi prompt mà không ảnh hưởng logic operator.
