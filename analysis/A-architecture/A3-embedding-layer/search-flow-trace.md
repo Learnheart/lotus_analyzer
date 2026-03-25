@@ -2,7 +2,7 @@
 
 ## Trace: `df.sem_search("title", "AI", K=2)`
 
-### Gia dinh setup:
+### Giả định setup:
 ```python
 import lotus
 from lotus.models import LM, SentenceTransformersRM
@@ -18,7 +18,7 @@ df = pd.DataFrame({
     "title": ["Machine learning tutorial", "Data science guide", "Python basics"]
 })
 df = df.sem_index("title", "title_index")
-# -> Tao embeddings, luu faiss index tai "title_index/"
+# -> Tạo embeddings, lưu faiss index tại "title_index/"
 
 df.sem_search("title", "AI", K=2)
 ```
@@ -30,23 +30,23 @@ df.sem_search("title", "AI", K=2)
 ```
 df.sem_search("title", "AI", K=2)
   |
-  |-- pandas tao SemSearchDataframe(df) -> self._obj = df
-  |-- Goi __call__("title", "AI", K=2)
-  |-- @operator_cache kiem tra cache (cache.py:33)
+  |-- pandas tạo SemSearchDataframe(df) -> self._obj = df
+  |-- Gọi __call__("title", "AI", K=2)
+  |-- @operator_cache kiểm tra cache (cache.py:33)
   |
   |-- K is not None -> vector search path
   |
-  |-- Lay rm va vs tu lotus.settings (sem_search.py:104-105):
+  |-- Lấy rm và vs từ lotus.settings (sem_search.py:104-105):
   |     rm = lotus.settings.rm   # SentenceTransformersRM instance
   |     vs = lotus.settings.vs   # FaissVS instance
   |
-  |-- Validate rm va vs khong None (sem_search.py:106-109)
+  |-- Validate rm và vs không None (sem_search.py:106-109)
   |
-  |-- Lay index directory tu attrs (sem_search.py:111):
+  |-- Lấy index directory từ attrs (sem_search.py:111):
   |     col_index_dir = self._obj.attrs["index_dirs"]["title"]
   |     -> "title_index"
   |
-  |-- Kiem tra va load index neu can (sem_search.py:112-114):
+  |-- Kiểm tra và load index nếu cần (sem_search.py:112-114):
   |     if vs.index_dir != col_index_dir:
   |         vs.load_index(col_index_dir)
   |     # Load faiss index + pickled vectors
@@ -77,11 +77,11 @@ query_vectors = rm.convert_query_to_query_vector("AI")
 vs_output: RMOutput = vs(query_vectors, search_K)
   |
   |-- FaissVS.__call__(query_vectors, K=2)  (faiss_vs.py:43)
-  |     |-- ids is None -> search toan bo index
+  |     |-- ids is None -> search toàn bộ index
   |     |-- distances, indices = self.faiss_index.search(query_vectors, 2)
   |     |     (faiss_vs.py:75)
   |     |
-  |     |-- Vi du ket qua:
+  |     |-- Ví dụ kết quả:
   |     |     indices = [[0, 1]]     # global doc indices
   |     |     distances = [[0.85, 0.82]]
   |     |
@@ -98,7 +98,7 @@ df_idxs = self._obj.index  # [0, 1, 2]
   |
   |-- Iterative search loop (sem_search.py:120-138):
   |     while True:
-  |         # Filter: chi giu results co idx trong df_idxs
+  |         # Filter: chỉ giữ results có idx trong df_idxs
   |         postfiltered_doc_idxs = []
   |         postfiltered_scores = []
   |         for idx, score in zip(doc_idxs, scores):
@@ -111,13 +111,13 @@ df_idxs = self._obj.index  # [0, 1, 2]
   |
   |         if len(postfiltered_doc_idxs) == K:
   |             break
-  |         search_K = search_K * 2  # Tang search_K neu khong du ket qua
+  |         search_K = search_K * 2  # Tăng search_K nếu không đủ kết quả
 ```
 
-**Tai sao can post-filter?**
-Faiss index co the chua nhieu documents hon DataFrame hien tai (vi DataFrame co the da duoc filter truoc do). `df_idxs` la index cua DataFrame hien tai, chi giu results co index thuoc DataFrame.
+**Tại sao cần post-filter?**
+Faiss index có thể chứa nhiều documents hơn DataFrame hiện tại (vì DataFrame có thể đã được filter trước đó). `df_idxs` là index của DataFrame hiện tại, chỉ giữ results có index thuộc DataFrame.
 
-**Adaptive search**: Neu post-filter loai bo qua nhieu ket qua (khong du K), tang `search_K *= 2` va search lai (sem_search.py:138).
+**Adaptive search**: Nếu post-filter loại bỏ quá nhiều kết quả (không đủ K), tăng `search_K *= 2` và search lại (sem_search.py:138).
 
 ### Step 5: Optional Reranking (sem_search.py:148-155)
 
@@ -137,7 +137,7 @@ if n_rerank is not None:
   |-- new_df = new_df.iloc[reranked_idxs]
 ```
 
-Reranking chi chay khi `n_rerank` duoc chi dinh. Co the dung ket hop: `K=100, n_rerank=10` -> lay 100 results bang vector search, roi rerank de chon 10 tot nhat.
+Reranking chỉ chạy khi `n_rerank` được chỉ định. Có thể dùng kết hợp: `K=100, n_rerank=10` -> lấy 100 results bằng vector search, rồi rerank để chọn 10 tốt nhất.
 
 ### Step 6: Return Result (sem_search.py:140-157)
 
@@ -146,16 +146,16 @@ new_df = self._obj.loc[postfiltered_doc_idxs]
   |-- DataFrame({"title": ["Machine learning tutorial", "Data science guide"]})
 
 new_df.attrs["index_dirs"] = self._obj.attrs.get("index_dirs", None)
-  |-- Preserve index_dirs cho cac operations tiep theo
+  |-- Preserve index_dirs cho các operations tiếp theo
 
 if return_scores:
     new_df["vec_scores_sim_score"] = postfiltered_scores
-  |-- Them cot scores neu duoc yeu cau
+  |-- Thêm cột scores nếu được yêu cầu
 
 Return new_df
 ```
 
-## Tong ket call stack
+## Tổng kết call stack
 
 ```
 df.sem_search("title", "AI", K=2)

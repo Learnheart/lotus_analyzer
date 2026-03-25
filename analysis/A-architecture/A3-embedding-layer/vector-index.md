@@ -2,7 +2,7 @@
 
 ## VS Abstract Base Class
 
-Dinh nghia tai `vector_store/vs.py:10`:
+Định nghĩa tại `vector_store/vs.py:10`:
 
 ```python
 class VS(ABC):
@@ -33,18 +33,18 @@ class VS(ABC):
 ```
 
 ### Interface:
-| Method | Muc dich | File:Line |
+| Method | Mục đích | File:Line |
 |---|---|---|
-| `index(docs, embeddings, index_dir)` | Tao va luu index | vs.py:17 |
-| `load_index(index_dir)` | Load index tu disk | vs.py:24 |
+| `index(docs, embeddings, index_dir)` | Tạo và lưu index | vs.py:17 |
+| `load_index(index_dir)` | Load index từ disk | vs.py:24 |
 | `__call__(query_vectors, K, ids)` | Nearest neighbor search | vs.py:31 |
-| `get_vectors_from_index(index_dir, ids)` | Lay vectors theo ID | vs.py:54 |
+| `get_vectors_from_index(index_dir, ids)` | Lấy vectors theo ID | vs.py:54 |
 
 ---
 
 ## FaissVS Implementation
 
-Dinh nghia tai `vector_store/faiss_vs.py:13`:
+Định nghĩa tại `vector_store/faiss_vs.py:13`:
 
 ```python
 class FaissVS(VS):
@@ -58,8 +58,8 @@ class FaissVS(VS):
 ```
 
 ### Constructor parameters:
-- `factory_string`: Default `"Flat"` - brute-force exact search. Co the doi thanh `"IVF100,Flat"` cho approximate search.
-- `metric`: Default `faiss.METRIC_INNER_PRODUCT` - cosine similarity (khi vectors da normalized)
+- `factory_string`: Default `"Flat"` - brute-force exact search. Có thể đổi thành `"IVF100,Flat"` cho approximate search.
+- `metric`: Default `faiss.METRIC_INNER_PRODUCT` - cosine similarity (khi vectors đã normalized)
 
 ### index() method (faiss_vs.py:22-30):
 
@@ -75,8 +75,8 @@ def index(self, docs, embeddings, index_dir, **kwargs):
     faiss.write_index(self.faiss_index, f"{index_dir}/index")
 ```
 
-Luu 2 files:
-1. `{index_dir}/vecs`: pickle dump cua embeddings NDArray (faiss_vs.py:28-29)
+Lưu 2 files:
+1. `{index_dir}/vecs`: pickle dump của embeddings NDArray (faiss_vs.py:28-29)
 2. `{index_dir}/index`: faiss native index file (faiss_vs.py:30)
 
 ### load_index() method (faiss_vs.py:32-36):
@@ -89,7 +89,7 @@ def load_index(self, index_dir: str) -> None:
         self.vecs = pickle.load(fp)
 ```
 
-Load ca faiss index va raw vectors tu disk.
+Load cả faiss index và raw vectors từ disk.
 
 ### __call__() method (faiss_vs.py:43-77):
 
@@ -99,7 +99,7 @@ def __call__(self, query_vectors, K, ids=None, **kwargs) -> RMOutput:
         raise ValueError("Index not loaded")
 
     if ids is not None:
-        # Subset search: tao temporary index chi voi vectors cua ids duoc chi dinh
+        # Subset search: tạo temporary index chỉ với vectors của ids được chỉ định
         subset_vecs = self.get_vectors_from_index(self.index_dir, ids)
         tmp_index = faiss.index_factory(subset_vecs.shape[1], self.factory_string, self.metric)
         tmp_index.add(subset_vecs)
@@ -113,13 +113,13 @@ def __call__(self, query_vectors, K, ids=None, **kwargs) -> RMOutput:
     return RMOutput(distances=distances, indices=indices)
 ```
 
-Dac biet: khi `ids` duoc cung cap (subset search):
-1. Lay vectors cua subset tu disk (faiss_vs.py:59)
-2. Tao temporary faiss index (faiss_vs.py:63-64)
-3. Search tren temporary index (faiss_vs.py:67)
-4. Map lai sub-indices thanh global indices (faiss_vs.py:71-72)
+Đặc biệt: khi `ids` được cung cấp (subset search):
+1. Lấy vectors của subset từ disk (faiss_vs.py:59)
+2. Tạo temporary faiss index (faiss_vs.py:63-64)
+3. Search trên temporary index (faiss_vs.py:67)
+4. Map lại sub-indices thành global indices (faiss_vs.py:71-72)
 
-Day la co che hieu qua de search tren subset cua DataFrame (vi du khi DataFrame da duoc filter truoc).
+Đây là cơ chế hiệu quả để search trên subset của DataFrame (ví dụ khi DataFrame đã được filter trước).
 
 ### get_vectors_from_index (faiss_vs.py:38-41):
 
@@ -130,14 +130,14 @@ def get_vectors_from_index(self, index_dir: str, ids: list[int]) -> NDArray[np.f
     return vecs[ids]
 ```
 
-Load toan bo vectors tu pickle file, roi numpy index theo ids.
+Load toàn bộ vectors từ pickle file, rồi numpy index theo ids.
 
-## Luu y
+## Lưu ý
 
-1. **Flat index**: Default `"Flat"` cho exact search, phu hop voi datasets nho-vua. Doi voi datasets lon, nen dung index khac nhu `"IVF100,Flat"`.
+1. **Flat index**: Default `"Flat"` cho exact search, phù hợp với datasets nhỏ-vừa. Đối với datasets lớn, nên dùng index khác như `"IVF100,Flat"`.
 
-2. **METRIC_INNER_PRODUCT**: Gia dinh vectors da duoc normalize (SentenceTransformersRM default `normalize_embeddings=True`). Inner product cua normalized vectors = cosine similarity.
+2. **METRIC_INNER_PRODUCT**: Giả định vectors đã được normalize (SentenceTransformersRM default `normalize_embeddings=True`). Inner product của normalized vectors = cosine similarity.
 
-3. **Pickle cho vectors**: Raw vectors luon duoc pickle dump rieng (faiss_vs.py:28-29). Dieu nay cho phep `get_vectors_from_index` lay vectors theo ID ma khong can reconstruct tu faiss index.
+3. **Pickle cho vectors**: Raw vectors luôn được pickle dump riêng (faiss_vs.py:28-29). Điều này cho phép `get_vectors_from_index` lấy vectors theo ID mà không cần reconstruct từ faiss index.
 
-4. **Khong co in-memory cache**: Moi lan `load_index` load tu disk. `sem_search` kiem tra `vs.index_dir != col_index_dir` (sem_search.py:112-113) de tranh load lai cung index.
+4. **Không có in-memory cache**: Mỗi lần `load_index` load từ disk. `sem_search` kiểm tra `vs.index_dir != col_index_dir` (sem_search.py:112-113) để tránh load lại cùng index.

@@ -2,7 +2,7 @@
 
 ## RM Abstract Base Class
 
-Dinh nghia tai `models/rm.py:10`:
+Định nghĩa tại `models/rm.py:10`:
 
 ```python
 class RM(ABC):
@@ -22,20 +22,20 @@ class RM(ABC):
     ) -> NDArray[np.float64]:
 ```
 
-### Interface chinh:
-- `_embed(docs)` (rm.py:27): Abstract method, subclass phai implement. Nhan list[str], tra ve NDArray.
+### Interface chính:
+- `_embed(docs)` (rm.py:27): Abstract method, subclass phải implement. Nhận list[str], trả về NDArray.
 - `__call__(docs)` (rm.py:41): Public method, delegate to `_embed`.
-- `convert_query_to_query_vector(queries)` (rm.py:53): Chuyen doi nhieu dang query thanh embedding vectors:
-  - `str` hoac `Image.Image` -> wrap thanh list, goi `_embed`
-  - `pd.Series` -> convert to list, goi `_embed`
-  - `list[str]` -> goi `_embed` truc tiep
-  - `np.ndarray` -> tra ve as-is (pre-computed vectors)
+- `convert_query_to_query_vector(queries)` (rm.py:53): Chuyển đổi nhiều dạng query thành embedding vectors:
+  - `str` hoặc `Image.Image` -> wrap thành list, gọi `_embed`
+  - `pd.Series` -> convert to list, gọi `_embed`
+  - `list[str]` -> gọi `_embed` trực tiếp
+  - `np.ndarray` -> trả về as-is (pre-computed vectors)
 
 ---
 
 ## Implementation 1: SentenceTransformersRM
 
-Dinh nghia tai `models/sentence_transformers_rm.py:11`:
+Định nghĩa tại `models/sentence_transformers_rm.py:11`:
 
 ```python
 class SentenceTransformersRM(RM):
@@ -48,12 +48,12 @@ class SentenceTransformersRM(RM):
     ) -> None:
 ```
 
-### Dac diem:
+### Đặc điểm:
 - **Default model**: `"intfloat/e5-base-v2"` (sentence_transformers_rm.py:28)
-- **Local inference**: Su dung `SentenceTransformer` tu `sentence-transformers` package (sentence_transformers_rm.py:47)
-- **Batch processing**: Xu ly `max_batch_size=64` documents moi lan (sentence_transformers_rm.py:67)
+- **Local inference**: Sử dụng `SentenceTransformer` từ `sentence-transformers` package (sentence_transformers_rm.py:47)
+- **Batch processing**: Xử lý `max_batch_size=64` documents mỗi lần (sentence_transformers_rm.py:67)
 - **Normalization**: `normalize_embeddings=True` by default (sentence_transformers_rm.py:30)
-- **GPU support**: Tu dong su dung GPU neu co, hoac chi dinh `device="cuda"` (sentence_transformers_rm.py:31)
+- **GPU support**: Tự động sử dụng GPU nếu có, hoặc chỉ định `device="cuda"` (sentence_transformers_rm.py:31)
 
 ### _embed implementation (sentence_transformers_rm.py:49-76):
 ```python
@@ -72,13 +72,13 @@ def _embed(self, docs: list[str]) -> NDArray[np.float64]:
     return np.vstack(all_embeddings)
 ```
 
-Luu y: `convert_to_base_data(batch)` (sentence_transformers_rm.py:69) convert tu custom dtypes (nhu ImageDtype) sang base data.
+Lưu ý: `convert_to_base_data(batch)` (sentence_transformers_rm.py:69) convert từ custom dtypes (như ImageDtype) sang base data.
 
 ---
 
 ## Implementation 2: LiteLLMRM
 
-Dinh nghia tai `models/litellm_rm.py:11`:
+Định nghĩa tại `models/litellm_rm.py:11`:
 
 ```python
 class LiteLLMRM(RM):
@@ -90,11 +90,11 @@ class LiteLLMRM(RM):
     ) -> None:
 ```
 
-### Dac diem:
+### Đặc điểm:
 - **Default model**: `"text-embedding-3-small"` (litellm_rm.py:27) - OpenAI embedding model
-- **API-based**: Su dung `litellm.embedding()` (litellm_rm.py:68), tuong tu nhu LM class su dung litellm cho completion
-- **Provider switching**: Doi model string de dung provider khac (e.g. "cohere/embed-english-v3.0")
-- **Truncation**: Optional `truncate_limit` de cat van ban dai (litellm_rm.py:65-66)
+- **API-based**: Sử dụng `litellm.embedding()` (litellm_rm.py:68), tương tự như LM class sử dụng litellm cho completion
+- **Provider switching**: Đổi model string để dùng provider khác (e.g. "cohere/embed-english-v3.0")
+- **Truncation**: Optional `truncate_limit` để cắt văn bản dài (litellm_rm.py:65-66)
 
 ### _embed implementation (litellm_rm.py:45-71):
 ```python
@@ -115,7 +115,7 @@ def _embed(self, docs: list[str]) -> NDArray[np.float64]:
 
 ## Implementation 3: ColBERTv2RM
 
-Dinh nghia tai `models/colbertv2_rm.py:17`:
+Định nghĩa tại `models/colbertv2_rm.py:17`:
 
 ```python
 class ColBERTv2RM:
@@ -125,13 +125,13 @@ class ColBERTv2RM:
         self.index_dir: str | None = None
 ```
 
-### Dac biet:
-- **KHONG ke thua RM**: `ColBERTv2RM` khong extend `RM` ABC. No co interface rieng.
-- **Built-in indexing**: `index()` method (colbertv2_rm.py:43) tao index truc tiep, khong can VS rieng
-- **Checkpoint**: Su dung `"colbert-ir/colbertv2.0"` (colbertv2_rm.py:64)
-- **Search interface**: `__call__(queries, K)` tra ve `RMOutput` truc tiep (colbertv2_rm.py:111)
+### Đặc biệt:
+- **KHÔNG kế thừa RM**: `ColBERTv2RM` không extend `RM` ABC. Nó có interface riêng.
+- **Built-in indexing**: `index()` method (colbertv2_rm.py:43) tạo index trực tiếp, không cần VS riêng
+- **Checkpoint**: Sử dụng `"colbert-ir/colbertv2.0"` (colbertv2_rm.py:64)
+- **Search interface**: `__call__(queries, K)` trả về `RMOutput` trực tiếp (colbertv2_rm.py:111)
 - **get_vectors_from_index**: raise `NotImplementedError` (colbertv2_rm.py:109)
-- **Conditional import**: ColBERT dependencies duoc import trong `try/except` (colbertv2_rm.py:10-14)
+- **Conditional import**: ColBERT dependencies được import trong `try/except` (colbertv2_rm.py:10-14)
 
 ### index() method (colbertv2_rm.py:43):
 ```python
@@ -148,7 +148,7 @@ def index(self, docs: list[str], index_dir: str, **kwargs) -> None:
 
 ---
 
-## So sanh 3 implementations
+## So sánh 3 implementations
 
 | Feature | SentenceTransformersRM | LiteLLMRM | ColBERTv2RM |
 |---|---|---|---|
