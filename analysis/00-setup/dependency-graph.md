@@ -1,41 +1,41 @@
 # LOTUS Dependency Graph
 
-> **lotus-ai v1.1.4** -- Phan tich he thong dependencies va build system.
+> **lotus-ai v1.1.4** -- Phân tích hệ thống dependencies và build system.
 
 ## Build System
 
-| Thuoc tinh | Gia tri |
+| Thuộc tính | Giá trị |
 |------------|---------|
 | Build backend | `hatchling` |
 | Package name | `lotus-ai` |
 | Version | `1.1.4` |
 | Python requirement | (xem pyproject.toml) |
 
-## Core Dependencies (Bat buoc)
+## Core Dependencies (Bắt buộc)
 
-> Cac thu vien luon duoc cai dat khi `pip install lotus-ai`.
+> Các thư viện luôn được cài đặt khi `pip install lotus-ai`.
 
-| Package | Vai tro trong LOTUS |
+| Package | Vai trò trong LOTUS |
 |---------|---------------------|
 | `backoff` | Retry logic cho API calls (rate limiting, transient errors) |
-| `faiss-cpu` | Vector similarity search -- backend mac dinh cho FaissVS |
-| `litellm` | Unified LLM API -- LM wrapper goi nhieu provider (OpenAI, Anthropic, v.v.) |
-| `numpy` | Xu ly mang so -- embeddings, vector operations |
-| `pandas` | Core data structure -- DataFrame la trung tam cua LOTUS |
+| `faiss-cpu` | Vector similarity search -- backend mặc định cho FaissVS |
+| `litellm` | Unified LLM API -- LM wrapper gọi nhiều provider (OpenAI, Anthropic, v.v.) |
+| `numpy` | Xử lý mảng số -- embeddings, vector operations |
+| `pandas` | Core data structure -- DataFrame là trung tâm của LOTUS |
 | `sentence-transformers` | Embedding models -- SentenceTransformersRM |
-| `tiktoken` | Token counting -- dem token cho OpenAI models |
-| `tqdm` | Progress bars -- hien thi tien trinh cac sem_ops |
-| `pydantic` | Data validation -- dinh nghia cac type classes |
+| `tiktoken` | Token counting -- đếm token cho OpenAI models |
+| `tqdm` | Progress bars -- hiển thị tiến trình các sem_ops |
+| `pydantic` | Data validation -- định nghĩa các type classes |
 
 ## Optional Dependencies
 
-### `xml` -- Ho tro serialization XML
-| Package | Vai tro |
+### `xml` -- Hỗ trợ serialization XML
+| Package | Vai trò |
 |---------|---------|
-| `lxml` | Parse va tao XML output tu LLM |
+| `lxml` | Parse và tạo XML output từ LLM |
 
-### `web_search` -- Tim kiem web
-| Package | Vai tro |
+### `web_search` -- Tìm kiếm web
+| Package | Vai trò |
 |---------|---------|
 | `serpapi` | Google Search API |
 | `arxiv` | ArXiv paper search |
@@ -44,57 +44,57 @@
 | `azure` | Azure search integration |
 | `tavily-python` | Tavily search API |
 
-### `file_extractor` -- Doc nhieu dinh dang file
-| Package | Vai tro |
+### `file_extractor` -- Đọc nhiều định dạng file
+| Package | Vai trò |
 |---------|---------|
-| `llama-index` | Framework doc file |
-| `pymupdf` | Doc file PDF |
-| `docx2txt` | Doc file Word (.docx) |
-| `python-pptx` | Doc file PowerPoint (.pptx) |
-| `python-magic` | Nhan dien loai file tu magic bytes |
+| `llama-index` | Framework đọc file |
+| `pymupdf` | Đọc file PDF |
+| `docx2txt` | Đọc file Word (.docx) |
+| `python-pptx` | Đọc file PowerPoint (.pptx) |
+| `python-magic` | Nhận diện loại file từ magic bytes |
 
-### `data_connectors` -- Ket noi nguon du lieu
-| Package | Vai tro |
+### `data_connectors` -- Kết nối nguồn dữ liệu
+| Package | Vai trò |
 |---------|---------|
-| `sqlalchemy` | Ket noi SQL databases |
-| `boto3` | Ket noi AWS S3 |
+| `sqlalchemy` | Kết nối SQL databases |
+| `boto3` | Kết nối AWS S3 |
 
 ### Vector Store Backends
-| Package | Vai tro |
+| Package | Vai trò |
 |---------|---------|
 | `weaviate-client` | Client cho WeaviateVS |
 | `qdrant-client` | Client cho QdrantVS |
 
 ## Dev Dependencies
 
-| Package | Vai tro |
+| Package | Vai trò |
 |---------|---------|
-| `ruff` | Linter + formatter (thay the flake8, black, isort) |
+| `ruff` | Linter + formatter (thay thế flake8, black, isort) |
 | `mypy` | Static type checking |
 | `pytest` | Testing framework |
-| `pre-commit` | Git hooks tu dong kiem tra code truoc commit |
+| `pre-commit` | Git hooks tự động kiểm tra code trước commit |
 
 ## Internal Dependency Graph
 
-> Bieu do phu thuoc giua cac module noi bo cua LOTUS.
+> Biểu đồ phụ thuộc giữa các module nội bộ của LOTUS.
 
 ```
 lotus/__init__.py
   |-- lotus/settings.py          (import Settings)
-  |-- lotus/sem_ops/*            (import tat ca sem operators de dang ky accessors)
+  |-- lotus/sem_ops/*            (import tất cả sem operators để đăng ký accessors)
   |-- lotus/evals/*              (import llm_as_judge, pairwise_judge)
   |-- lotus/models/*             (re-export)
   |-- lotus/vector_store/*       (re-export)
   |-- lotus/web_search.py        (re-export)
 
 lotus/sem_ops/sem_filter.py
-  |-- lotus/settings.py          (lay lm, helper_lm tu settings)
-  |-- lotus/models/lm.py         (goi LM.generate)
-  |-- lotus/templates/           (tao prompt)
+  |-- lotus/settings.py          (lấy lm, helper_lm từ settings)
+  |-- lotus/models/lm.py         (gọi LM.generate)
+  |-- lotus/templates/           (tạo prompt)
   |-- lotus/types.py             (SemanticFilterOutput, CascadeArgs, v.v.)
   |-- lotus/nl_expression.py     (parse_cols)
   |-- lotus/sem_ops/cascade_utils.py  (cascade optimization)
-  |-- lotus/sem_ops/postprocessors.py (xu ly output)
+  |-- lotus/sem_ops/postprocessors.py (xử lý output)
   |-- lotus/cache.py             (operator_cache decorator)
 
 lotus/sem_ops/sem_map.py
@@ -121,7 +121,7 @@ lotus/sem_ops/sem_agg.py
   |-- lotus/models/lm.py
   |-- lotus/templates/
   |-- lotus/types.py
-  |-- lotus/long_context_strategy.py  (xu ly van ban dai)
+  |-- lotus/long_context_strategy.py  (xử lý văn bản dài)
   |-- lotus/cache.py
 
 lotus/sem_ops/sem_topk.py
@@ -135,12 +135,12 @@ lotus/sem_ops/sem_search.py
   |-- lotus/settings.py
   |-- lotus/models/rm.py          (retrieval)
   |-- lotus/models/reranker.py    (reranking)
-  |-- lotus/vector_store/         (truy van index)
+  |-- lotus/vector_store/         (truy vấn index)
 
 lotus/sem_ops/sem_index.py
   |-- lotus/settings.py
   |-- lotus/models/rm.py
-  |-- lotus/vector_store/         (tao index)
+  |-- lotus/vector_store/         (tạo index)
 
 lotus/sem_ops/sem_sim_join.py
   |-- lotus/settings.py
@@ -179,8 +179,8 @@ Layer 4: User Code
   |  df.sem_filter("..."), df.sem_map("..."), v.v.
   |
 Layer 3: Semantic Operators (lotus/sem_ops/)
-  |  Dang ky nhu pandas DataFrame accessors
-  |  Phu thuoc: templates, models, types, cache, nl_expression
+  |  Đăng ký như pandas DataFrame accessors
+  |  Phụ thuộc: templates, models, types, cache, nl_expression
   |
 Layer 2: Models & Infrastructure
   |  LM (litellm), RM (sentence-transformers), VS (faiss)
@@ -193,14 +193,14 @@ Layer 0: External Libraries
      pandas, litellm, faiss-cpu, sentence-transformers, numpy, pydantic
 ```
 
-## Ghi chu quan trong
+## Ghi chú quan trọng
 
-1. **litellm la trung tam**: Tat ca LLM calls di qua litellm, cho phep LOTUS ho tro 100+ LLM providers ma khong can thay doi code.
+1. **litellm là trung tâm**: Tất cả LLM calls đi qua litellm, cho phép LOTUS hỗ trợ 100+ LLM providers mà không cần thay đổi code.
 
-2. **pandas la nen tang**: Moi sem_op la mot DataFrame accessor, nghia la LOTUS mo rong pandas thay vi thay the no.
+2. **pandas là nền tảng**: Mỗi sem_op là một DataFrame accessor, nghĩa là LOTUS mở rộng pandas thay vì thay thế nó.
 
-3. **faiss-cpu la bat buoc**: Mac du co WeaviateVS va QdrantVS, faiss-cpu la core dependency vi FaissVS la vector store mac dinh va sem_cluster_by dung FAISS k-means truc tiep.
+3. **faiss-cpu là bắt buộc**: Mặc dù có WeaviateVS và QdrantVS, faiss-cpu là core dependency vì FaissVS là vector store mặc định và sem_cluster_by dùng FAISS k-means trực tiếp.
 
-4. **sentence-transformers la bat buoc**: Du co LiteLLMRM va ColBERTv2RM, sentence-transformers van la core dependency vi SentenceTransformersRM la RM mac dinh.
+4. **sentence-transformers là bắt buộc**: Dù có LiteLLMRM và ColBERTv2RM, sentence-transformers vẫn là core dependency vì SentenceTransformersRM là RM mặc định.
 
-5. **Cascade pattern**: sem_filter, sem_join, sem_topk ho tro cascade optimization -- dung helper_lm (re/nhanh) truoc, chi goi lm chinh khi can, giam chi phi.
+5. **Cascade pattern**: sem_filter, sem_join, sem_topk hỗ trợ cascade optimization -- dùng helper_lm (rẻ/nhanh) trước, chỉ gọi lm chính khi cần, giảm chi phí.
